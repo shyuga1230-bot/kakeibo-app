@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Download, Upload, Trash2, Shield, ChevronRight } from 'lucide-react';
+import { Download, Upload, Trash2, Shield, ChevronRight, Info } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { db } from '@/db/database';
 import { seedDatabase } from '@/db/seed';
@@ -91,9 +91,9 @@ export default function SettingsPage() {
     setImporting(true);
     try {
       await importData(file);
-      showMsg('success', 'データをインポートしました');
+      showMsg('success', 'データを読み込みました');
     } catch {
-      showMsg('error', 'インポートに失敗しました。正しいバックアップファイルか確認してください。');
+      showMsg('error', '読み込みに失敗しました。正しいバックアップファイルか確認してください。');
     } finally {
       setImporting(false);
       e.target.value = '';
@@ -118,10 +118,10 @@ export default function SettingsPage() {
       <h1 className="text-xl font-bold text-gray-900 mb-5">設定</h1>
 
       {/* Data storage notice */}
-      <div className="bg-indigo-50 rounded-2xl p-4 mb-5 flex gap-3">
-        <Shield size={18} className="text-indigo-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-indigo-600 leading-relaxed">
-          このアプリのデータはこのブラウザ内にのみ保存されます。サーバーへの送信は一切行いません。データはブラウザのIndexedDBに安全に保管されます。
+      <div className="bg-amber-50 rounded-2xl p-4 mb-5 flex gap-3 border border-amber-100">
+        <Shield size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-amber-700 leading-relaxed">
+          このアプリのデータは、この端末のブラウザ内に保存されています。機種変更・ブラウザデータの削除・アプリの削除をするとデータが消える可能性があります。<span className="font-semibold">定期的にバックアップを保存してください。</span>
         </p>
       </div>
 
@@ -147,8 +147,8 @@ export default function SettingsPage() {
             <Download size={18} className="text-green-500" />
           </div>
           <div className="flex-1 text-left">
-            <p className="text-sm font-medium text-gray-900">データをエクスポート</p>
-            <p className="text-xs text-gray-400">JSONファイルとして保存</p>
+            <p className="text-sm font-medium text-gray-900">バックアップを保存</p>
+            <p className="text-xs text-gray-400">JSONファイルとして端末に保存</p>
           </div>
           <ChevronRight size={16} className="text-gray-300" />
         </button>
@@ -159,9 +159,9 @@ export default function SettingsPage() {
           </div>
           <div className="flex-1 text-left">
             <p className="text-sm font-medium text-gray-900">
-              {importing ? 'インポート中...' : 'データをインポート'}
+              {importing ? '読み込み中...' : 'バックアップを読み込む'}
             </p>
-            <p className="text-xs text-gray-400">JSONバックアップから復元</p>
+            <p className="text-xs text-gray-400">保存済みJSONから復元</p>
           </div>
           <ChevronRight size={16} className="text-gray-300" />
           <input
@@ -175,7 +175,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Danger zone */}
-      <div className="space-y-2">
+      <div className="space-y-2 mb-6">
         <p className="text-xs font-semibold text-red-400 px-1 mb-2">危険な操作</p>
 
         <button
@@ -193,10 +193,38 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* App info */}
-      <div className="mt-8 text-center">
-        <p className="text-sm font-bold text-gray-400">💰 かけいぼ</p>
-        <p className="text-xs text-gray-300 mt-1">大学生の家計管理アプリ</p>
+      {/* About */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-gray-400 px-1 mb-2">このアプリについて</p>
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center">
+              <Info size={18} className="text-indigo-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">かけいぼ</p>
+              <p className="text-xs text-gray-400">大学生のためのシンプルな家計管理アプリ</p>
+            </div>
+          </div>
+          <div className="space-y-2 text-xs text-gray-500 border-t border-gray-50 pt-3">
+            <div className="flex justify-between">
+              <span className="text-gray-400">データ保存</span>
+              <span>この端末のブラウザ内</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">ログイン</span>
+              <span>不要</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">外部API</span>
+              <span>なし（完全オフライン動作）</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">バージョン</span>
+              <span>0.1.0</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <ConfirmDialog
