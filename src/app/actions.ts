@@ -35,10 +35,12 @@ import {
   updateMasterItem,
 } from "@/lib/items";
 
-/** 新しい商品名を商品マスタへ自動追加(失敗しても登録自体は成功扱い) */
-async function addNewNamesToMaster(names: string[]): Promise<void> {
+/** 新しい商品を商品マスタへ自動追加(金額も標準金額として保存。失敗しても登録自体は成功扱い) */
+async function addNewNamesToMaster(
+  items: { itemName: string; amount: number | null }[],
+): Promise<void> {
   try {
-    await ensureMasterItems(names);
+    await ensureMasterItems(items);
   } catch (e) {
     console.error("ensureMasterItems failed:", e);
   }
@@ -210,7 +212,7 @@ export async function createQuoteAction(
 
   try {
     await createQuote(validated.input);
-    await addNewNamesToMaster(validated.input.items.map((i) => i.itemName));
+    await addNewNamesToMaster(validated.input.items);
   } catch (e) {
     console.error("createQuoteAction failed:", e);
     return {
@@ -245,7 +247,7 @@ export async function updateQuoteAction(
       };
     }
     await updateQuote(quoteId, validated.input);
-    await addNewNamesToMaster(validated.input.items.map((i) => i.itemName));
+    await addNewNamesToMaster(validated.input.items);
   } catch (e) {
     console.error("updateQuoteAction failed:", e);
     return {
@@ -309,7 +311,7 @@ export async function bulkImportAction(
 
   const { rows, errors } = parseBulkText(text);
   let imported = 0;
-  const importedNames: string[] = [];
+  const importedItems: { itemName: string; amount: number | null }[] = [];
   const saveErrors: ImportRowError[] = [];
 
   // 正常な行だけを1行ずつ登録する(エラー行があっても他の行は登録する)
@@ -322,7 +324,7 @@ export async function bulkImportAction(
         items: row.items,
       });
       imported += 1;
-      importedNames.push(...row.items.map((i) => i.itemName));
+      importedItems.push(...row.items);
     } catch (e) {
       console.error(`bulkImportAction: line ${row.line} failed:`, e);
       saveErrors.push({
@@ -333,7 +335,7 @@ export async function bulkImportAction(
   }
 
   if (imported > 0) {
-    await addNewNamesToMaster(importedNames);
+    await addNewNamesToMaster(importedItems);
     revalidatePath("/", "layout");
   }
   const allErrors = [...errors, ...saveErrors].sort((a, b) => a.line - b.line);

@@ -251,7 +251,7 @@ export default function QuoteForm({ masterItems, edit, prefill }: Props) {
         </button>
         <p className="mt-1 text-xs text-slate-500">
           金額は「1,200,000」「¥1200000」「全角数字」のままでも登録できます。
-          新しい商品名で登録すると、自動で「商品管理」にも追加され、次回から選べるようになります。
+          新しい商品名で登録すると、金額とあわせて自動で「商品管理」に追加され、次回からは選ぶだけで金額まで入ります。
         </p>
       </div>
 
