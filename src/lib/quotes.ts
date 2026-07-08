@@ -1,7 +1,7 @@
 // 見積もりデータの読み書き(データアクセス層)。
 // 認証チェックは呼び出し側(ページ・サーバー処理)で行う。
 import "server-only";
-import { prisma } from "@/lib/db";
+import { getPrisma } from "@/lib/db";
 import {
   computeCoSales,
   computeItemStats,
@@ -30,7 +30,7 @@ export type QuoteWithItems = {
 
 /** 分析・サマリー用に、全見積もりの項目名と金額を読み込む */
 export async function loadAllQuoteItems(): Promise<QuoteItems[]> {
-  const quotes = await prisma.quote.findMany({
+  const quotes = await getPrisma().quote.findMany({
     select: {
       id: true,
       items: { select: { itemName: true, amount: true }, orderBy: { id: "asc" } },
@@ -78,10 +78,10 @@ export async function listQuotes(page: number): Promise<{
   page: number;
   pageCount: number;
 }> {
-  const total = await prisma.quote.count();
+  const total = await getPrisma().quote.count();
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), pageCount);
-  const quotes = await prisma.quote.findMany({
+  const quotes = await getPrisma().quote.findMany({
     orderBy: [{ quoteDate: "desc" }, { id: "desc" }],
     skip: (safePage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
@@ -91,14 +91,14 @@ export async function listQuotes(page: number): Promise<{
 }
 
 export async function getQuote(id: number): Promise<QuoteWithItems | null> {
-  return await prisma.quote.findUnique({
+  return await getPrisma().quote.findUnique({
     where: { id },
     include: { items: { orderBy: { id: "asc" } } },
   });
 }
 
 export async function createQuote(input: QuoteInput): Promise<number> {
-  const quote = await prisma.quote.create({
+  const quote = await getPrisma().quote.create({
     data: {
       quoteDate: input.quoteDate,
       customerName: input.customerName,
@@ -112,9 +112,9 @@ export async function createQuote(input: QuoteInput): Promise<number> {
 
 export async function updateQuote(id: number, input: QuoteInput): Promise<void> {
   // 明細は入れ替え(全削除→再作成)。1つのトランザクションで行う。
-  await prisma.$transaction([
-    prisma.quoteItem.deleteMany({ where: { quoteId: id } }),
-    prisma.quote.update({
+  await getPrisma().$transaction([
+    getPrisma().quoteItem.deleteMany({ where: { quoteId: id } }),
+    getPrisma().quote.update({
       where: { id },
       data: {
         quoteDate: input.quoteDate,
@@ -127,12 +127,12 @@ export async function updateQuote(id: number, input: QuoteInput): Promise<void> 
 }
 
 export async function deleteQuote(id: number): Promise<void> {
-  await prisma.quote.delete({ where: { id } });
+  await getPrisma().quote.delete({ where: { id } });
 }
 
 /** CSVエクスポート用: 全データ(明細1行 = CSV1行) */
 export async function loadAllForExport(): Promise<QuoteWithItems[]> {
-  return await prisma.quote.findMany({
+  return await getPrisma().quote.findMany({
     orderBy: [{ quoteDate: "asc" }, { id: "asc" }],
     include: { items: { orderBy: { id: "asc" } } },
   });
