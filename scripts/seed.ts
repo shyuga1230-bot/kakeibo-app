@@ -58,6 +58,19 @@ async function main() {
     return;
   }
 
+  // 商品マスタにも代表的な商品を登録しておく(標準金額付き)
+  const masterItems: [string, number | null][] = [
+    ["3D起工測量", 480000],
+    ["ICT建機レンタル", 1200000],
+    ["操作講習", 80000],
+    ["出来形管理ソフト", 300000],
+    ["ドローン空撮", 160000],
+  ];
+  await prisma.item.createMany({
+    data: masterItems.map(([name, defaultAmount]) => ({ name, defaultAmount })),
+    skipDuplicates: true,
+  });
+
   for (const seed of SEEDS) {
     await prisma.quote.create({
       data: {
@@ -73,7 +86,7 @@ async function main() {
       },
     });
   }
-  console.log(`サンプルデータ ${SEEDS.length} 件を登録しました。`);
+  console.log(`サンプルデータ ${SEEDS.length} 件と商品マスタを登録しました。`);
 }
 
 main()

@@ -1,14 +1,14 @@
 // 登録画面(トップページ)。受注した見積もりを1件ずつ登録する。
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { getItemNameSuggestions } from "@/lib/quotes";
-import QuoteForm from "@/components/QuoteForm";
+import { listMasterItems } from "@/lib/items";
+import RegisterPanel from "@/components/RegisterPanel";
 import BulkImport from "@/components/BulkImport";
 
 export default async function RegisterPage() {
   if (!(await getSession())) redirect("/login");
 
-  const suggestions = await getItemNameSuggestions();
+  const masterItems = await listMasterItems();
 
   return (
     <div className="space-y-6">
@@ -16,9 +16,10 @@ export default async function RegisterPage() {
         <h2 className="text-lg font-bold">見積もりを登録する</h2>
         <p className="mt-1 text-sm text-slate-600">
           受注した見積もり1件分の内容を入力してください。登録したデータは全員で共有されます。
+          Excelの見積書を貼り付けて自動入力することもできます。
         </p>
         <div className="mt-4">
-          <QuoteForm suggestions={suggestions} />
+          <RegisterPanel masterItems={masterItems} />
         </div>
       </section>
 

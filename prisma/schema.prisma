@@ -25,6 +25,21 @@ model Quote {
   @@map("quotes")
 }
 
+// 商品マスタ(よく売る商品・サービスをあらかじめ登録しておく)。
+// 見積もり登録画面でボタン一発で項目に追加できるようにするための一覧。
+// 見積もりの明細(quote_items)は名前の文字列で保存するため、
+// ここの名前を変えたり消したりしても過去の見積もりデータは変わらない。
+model Item {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  // 標準金額(円・任意)。設定すると見積もり登録時に金額が自動で入る
+  defaultAmount Int?     @map("default_amount")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("items")
+}
+
 // 見積もりの明細(売れた項目)1行
 model QuoteItem {
   id       Int    @id @default(autoincrement())
