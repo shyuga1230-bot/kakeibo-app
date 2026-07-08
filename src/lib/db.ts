@@ -8,10 +8,16 @@ import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 function createClient() {
-  const url = process.env.DATABASE_URL;
+  // アプリの通常アクセスは「プール接続」を優先する(サーバーレスで効率が良い)。
+  // Vercel の Neon 連携が自動で入れる変数名にも対応する。
+  const url =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL_UNPOOLED ||
+    process.env.POSTGRES_URL_NON_POOLING;
   if (!url) {
     throw new Error(
-      "環境変数 DATABASE_URL が設定されていません。.env ファイル(またはVercelの環境変数)を確認してください(README「初期設定」「本番運用」参照)。",
+      "データベースの接続先(DATABASE_URL など)が設定されていません。.env ファイル(またはVercelの環境変数)を確認してください(README「初期設定」「本番運用」参照)。",
     );
   }
   const adapter = new PrismaPg({ connectionString: url });

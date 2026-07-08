@@ -5,12 +5,21 @@
 import "dotenv/config";
 import { spawnSync } from "node:child_process";
 
-if (!process.env.DATABASE_URL) {
+// データベースの接続先が(どの変数名であれ)設定されているか確認する。
+// Vercel の Neon 連携は DATABASE_URL / POSTGRES_URL などを自動で入れる。
+const dbUrl =
+  process.env.DIRECT_DATABASE_URL ||
+  process.env.DATABASE_URL_UNPOOLED ||
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL;
+
+if (!dbUrl) {
   console.warn(
-    "[build] DATABASE_URL が未設定のため、データベースのマイグレーションを省略しました。",
+    "[build] データベースの接続先(DATABASE_URL など)が未設定のため、マイグレーションを省略しました。",
   );
   console.warn(
-    "[build] 本番で使う前に環境変数 DATABASE_URL を設定してください(README「本番運用」参照)。",
+    "[build] 本番で使う前に環境変数を設定してください(README「本番運用」参照)。",
   );
   process.exit(0);
 }
