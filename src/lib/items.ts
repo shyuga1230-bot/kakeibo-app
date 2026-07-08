@@ -8,30 +8,33 @@ import { computeItemStats } from "@/lib/analysis";
 export type MasterItem = {
   id: number;
   name: string;
+  code: string | null;
   defaultAmount: number | null;
 };
 
 /** 商品マスタの一覧(登録した順) */
 export async function listMasterItems(): Promise<MasterItem[]> {
   return await getPrisma().item.findMany({
-    select: { id: true, name: true, defaultAmount: true },
+    select: { id: true, name: true, code: true, defaultAmount: true },
     orderBy: { id: "asc" },
   });
 }
 
 export async function createMasterItem(
   name: string,
+  code: string | null,
   defaultAmount: number | null,
 ): Promise<void> {
-  await getPrisma().item.create({ data: { name, defaultAmount } });
+  await getPrisma().item.create({ data: { name, code, defaultAmount } });
 }
 
 export async function updateMasterItem(
   id: number,
   name: string,
+  code: string | null,
   defaultAmount: number | null,
 ): Promise<void> {
-  await getPrisma().item.update({ where: { id }, data: { name, defaultAmount } });
+  await getPrisma().item.update({ where: { id }, data: { name, code, defaultAmount } });
 }
 
 export async function deleteMasterItem(id: number): Promise<void> {

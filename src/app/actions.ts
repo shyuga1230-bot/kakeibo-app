@@ -358,17 +358,24 @@ export async function bulkImportAction(
 /** 商品名と標準金額の入力チェック(登録・編集で共通) */
 function validateMasterItemForm(
   formData: FormData,
-): { ok: true; name: string; defaultAmount: number | null } | { ok: false; error: string } {
+):
+  | { ok: true; name: string; code: string | null; defaultAmount: number | null }
+  | { ok: false; error: string } {
   const name = normalizeItemName(String(formData.get("name") ?? ""));
   if (name === "") return { ok: false, error: "商品名を入力してください。" };
   if (name.length > 100) {
     return { ok: false, error: "商品名が長すぎます(100文字まで)。" };
   }
+  const codeRaw = normalizeItemName(String(formData.get("code") ?? ""));
+  if (codeRaw.length > 50) {
+    return { ok: false, error: "品番が長すぎます(50文字まで)。" };
+  }
+  const code = codeRaw === "" ? null : codeRaw;
   const amountResult = parseAmount(String(formData.get("default_amount") ?? ""));
   if (amountResult.error) {
     return { ok: false, error: `標準${amountResult.error}。` };
   }
-  return { ok: true, name, defaultAmount: amountResult.value };
+  return { ok: true, name, code, defaultAmount: amountResult.value };
 }
 
 function isUniqueError(e: unknown): boolean {
@@ -383,10 +390,10 @@ export async function createMasterItemAction(
   const validated = validateMasterItemForm(formData);
   if (!validated.ok) return validated;
   try {
-    await createMasterItem(validated.name, validated.defaultAmount);
+    await createMasterItem(validated.name, validated.code, validated.defaultAmount);
   } catch (e) {
     if (isUniqueError(e)) {
-      return { ok: false, error: `「${validated.name}」はすでに登録されています。` };
+      return { ok: false, error: "同じ商品名または品番がすでに登録されています。" };
     }
     console.error("createMasterItemAction failed:", e);
     return { ok: false, error: "保存に失敗しました。もう一度お試しください。" };
@@ -407,10 +414,10 @@ export async function updateMasterItemAction(
   const validated = validateMasterItemForm(formData);
   if (!validated.ok) return validated;
   try {
-    await updateMasterItem(itemId, validated.name, validated.defaultAmount);
+    await updateMasterItem(itemId, validated.name, validated.code, validated.defaultAmount);
   } catch (e) {
     if (isUniqueError(e)) {
-      return { ok: false, error: `「${validated.name}」はすでに登録されています。` };
+      return { ok: false, error: "同じ商品名または品番がすでに登録されています。" };
     }
     console.error("updateMasterItemAction failed:", e);
     return {

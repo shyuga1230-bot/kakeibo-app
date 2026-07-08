@@ -32,7 +32,7 @@ export type QuoteFormPrefill = {
 
 type Props = {
   /** 商品マスタ(項目のプルダウンの選択肢になる) */
-  masterItems?: { name: string; defaultAmount: number | null }[];
+  masterItems?: { name: string; code: string | null; defaultAmount: number | null }[];
   /** 編集時のみ指定 */
   edit?: QuoteFormPrefill & { quoteId: number };
   /** 新規登録時に、あらかじめ入れておく内容(見積書の読み取り結果など) */
@@ -122,6 +122,39 @@ export default function QuoteForm({ masterItems, edit, prefill }: Props) {
     [masterItems],
   );
 
+  const [codeInput, setCodeInput] = useState("");
+  const [codeError, setCodeError] = useState<string | null>(null);
+
+  /** 品番から商品を探して項目に追加する */
+  const addByCode = () => {
+    const q = normalizeItemName(codeInput).toLowerCase();
+    if (q === "") return;
+    const master = (masterItems ?? []).find(
+      (m) => m.code && m.code.toLowerCase() === q,
+    );
+    if (!master) {
+      setCodeError(`品番「${codeInput}」の商品が見つかりません(商品管理で品番を設定できます)。`);
+      return;
+    }
+    const entered = new Set(rows.map((r) => normalizeItemName(r.name)));
+    if (entered.has(master.name)) {
+      setCodeError(`「${master.name}」はすでに項目に入っています。`);
+      return;
+    }
+    const amount = master.defaultAmount == null ? "" : String(master.defaultAmount);
+    setRows((rs) => {
+      const emptyIndex = rs.findIndex((r) => r.name.trim() === "" && r.amount.trim() === "");
+      if (emptyIndex !== -1) {
+        const copy = [...rs];
+        copy[emptyIndex] = newRow(master.name, amount);
+        return copy;
+      }
+      return [...rs, newRow(master.name, amount)];
+    });
+    setCodeInput("");
+    setCodeError(null);
+  };
+
   /** プルダウンで商品を選んだとき(「新しい商品名」を選ぶと入力欄に切り替わる) */
   const handleSelect = (key: number, value: string) => {
     if (value === "__new__") {
@@ -182,6 +215,38 @@ export default function QuoteForm({ masterItems, edit, prefill }: Props) {
           </span>
           <span className="text-xs text-slate-500">金額は空欄でもかまいません</span>
         </div>
+        {(masterItems ?? []).some((m) => m.code) && (
+          <div className="mt-1.5">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={codeInput}
+                onChange={(e) => {
+                  setCodeInput(e.target.value);
+                  setCodeError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing) addByCode();
+                }}
+                placeholder="品番で追加(例: A-001)"
+                aria-label="品番で追加"
+                className="w-44 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={addByCode}
+                className="rounded-md border border-blue-700 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50"
+              >
+                追加
+              </button>
+            </div>
+            {codeError && (
+              <p role="alert" className="mt-1 text-xs text-red-700">
+                {codeError}
+              </p>
+            )}
+          </div>
+        )}
         <div className="mt-1 space-y-2">
           {rows.map((row, idx) => (
             <div key={row.key} className="flex items-center gap-2">
@@ -207,7 +272,7 @@ export default function QuoteForm({ masterItems, edit, prefill }: Props) {
                     <option value="">商品を選ぶ…</option>
                     {(masterItems ?? []).map((m) => (
                       <option key={m.name} value={m.name}>
-                        {m.name}
+                        {m.code ? `${m.code} | ${m.name}` : m.name}
                       </option>
                     ))}
                     {row.name !== "" && !masterNames.has(row.name) && (

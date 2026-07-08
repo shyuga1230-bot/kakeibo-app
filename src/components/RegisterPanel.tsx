@@ -9,7 +9,7 @@ import SheetPaste from "@/components/SheetPaste";
 import type { ParsedQuoteSheet } from "@/lib/quote-sheet";
 
 type Props = {
-  masterItems: { name: string; defaultAmount: number | null }[];
+  masterItems: { name: string; code: string | null; defaultAmount: number | null }[];
 };
 
 type ParseInfo = {

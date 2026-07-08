@@ -77,6 +77,14 @@ function ItemRow({ item }: { item: MasterItem }) {
           />
           <input
             type="text"
+            name="code"
+            defaultValue={item.code ?? ""}
+            placeholder="品番(任意)"
+            aria-label="品番"
+            className="w-28 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          />
+          <input
+            type="text"
             name="default_amount"
             inputMode="numeric"
             defaultValue={item.defaultAmount == null ? "" : String(item.defaultAmount)}
@@ -116,6 +124,11 @@ function ItemRow({ item }: { item: MasterItem }) {
   return (
     <li className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
       <div className="min-w-0">
+        {item.code && (
+          <span className="mr-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-xs tabular-nums text-slate-600">
+            {item.code}
+          </span>
+        )}
         <span className="break-all text-sm font-medium">{item.name}</span>
         <span className="ml-2 text-xs tabular-nums text-slate-500">
           {item.defaultAmount != null ? `標準 ¥${formatYen(item.defaultAmount)}` : ""}
@@ -183,6 +196,13 @@ export default function ItemMasterManager({ items }: { items: MasterItem[] }) {
           placeholder="商品名(例: 3D起工測量)"
           aria-label="商品名"
           className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+        />
+        <input
+          type="text"
+          name="code"
+          placeholder="品番(任意)"
+          aria-label="品番"
+          className="w-32 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
         />
         <input
           type="text"
