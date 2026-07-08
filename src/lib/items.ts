@@ -53,3 +53,15 @@ export async function importMasterItemsFromHistory(): Promise<number> {
   });
   return result.count;
 }
+
+/**
+ * 見積もりに登録された項目名のうち、マスタに無いものを自動で追加する。
+ * (新しい商品名で登録すると、次回からプルダウンで選べるようにするため)
+ */
+export async function ensureMasterItems(names: string[]): Promise<void> {
+  if (names.length === 0) return;
+  await getPrisma().item.createMany({
+    data: [...new Set(names)].map((name) => ({ name })),
+    skipDuplicates: true,
+  });
+}

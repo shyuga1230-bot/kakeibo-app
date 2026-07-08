@@ -9,7 +9,6 @@ import SheetPaste from "@/components/SheetPaste";
 import type { ParsedQuoteSheet } from "@/lib/quote-sheet";
 
 type Props = {
-  suggestions: string[];
   masterItems: { name: string; defaultAmount: number | null }[];
 };
 
@@ -18,7 +17,7 @@ type ParseInfo = {
   warnings: string[];
 };
 
-export default function RegisterPanel({ suggestions, masterItems }: Props) {
+export default function RegisterPanel({ masterItems }: Props) {
   const [prefill, setPrefill] = useState<QuoteFormPrefill | null>(null);
   const [parseInfo, setParseInfo] = useState<ParseInfo | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -61,7 +60,6 @@ export default function RegisterPanel({ suggestions, masterItems }: Props) {
         )}
         <QuoteForm
           key={formKey}
-          suggestions={suggestions}
           masterItems={masterItems}
           prefill={prefill ?? undefined}
         />

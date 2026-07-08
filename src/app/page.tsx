@@ -1,7 +1,6 @@
 // 登録画面(トップページ)。受注した見積もりを1件ずつ登録する。
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { getItemNameSuggestions } from "@/lib/quotes";
 import { listMasterItems } from "@/lib/items";
 import RegisterPanel from "@/components/RegisterPanel";
 import BulkImport from "@/components/BulkImport";
@@ -9,14 +8,7 @@ import BulkImport from "@/components/BulkImport";
 export default async function RegisterPage() {
   if (!(await getSession())) redirect("/login");
 
-  const [historyNames, masterItems] = await Promise.all([
-    getItemNameSuggestions(),
-    listMasterItems(),
-  ]);
-  // 入力候補は「商品マスタ + 過去に登録された名前」を重複なしで
-  const suggestions = [
-    ...new Set([...masterItems.map((m) => m.name), ...historyNames]),
-  ];
+  const masterItems = await listMasterItems();
 
   return (
     <div className="space-y-6">
@@ -27,7 +19,7 @@ export default async function RegisterPage() {
           Excelの見積書を貼り付けて自動入力することもできます。
         </p>
         <div className="mt-4">
-          <RegisterPanel suggestions={suggestions} masterItems={masterItems} />
+          <RegisterPanel masterItems={masterItems} />
         </div>
       </section>
 

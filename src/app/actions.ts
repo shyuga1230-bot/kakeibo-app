@@ -30,9 +30,19 @@ import {
 import {
   createMasterItem,
   deleteMasterItem,
+  ensureMasterItems,
   importMasterItemsFromHistory,
   updateMasterItem,
 } from "@/lib/items";
+
+/** 新しい商品名を商品マスタへ自動追加(失敗しても登録自体は成功扱い) */
+async function addNewNamesToMaster(names: string[]): Promise<void> {
+  try {
+    await ensureMasterItems(names);
+  } catch (e) {
+    console.error("ensureMasterItems failed:", e);
+  }
+}
 
 const LOGIN_ERROR_WAIT_MS = 800; // 失敗時の待ち時間(下のロックアウトと併用)
 
@@ -200,6 +210,7 @@ export async function createQuoteAction(
 
   try {
     await createQuote(validated.input);
+    await addNewNamesToMaster(validated.input.items.map((i) => i.itemName));
   } catch (e) {
     console.error("createQuoteAction failed:", e);
     return {
@@ -234,6 +245,7 @@ export async function updateQuoteAction(
       };
     }
     await updateQuote(quoteId, validated.input);
+    await addNewNamesToMaster(validated.input.items.map((i) => i.itemName));
   } catch (e) {
     console.error("updateQuoteAction failed:", e);
     return {
@@ -297,6 +309,7 @@ export async function bulkImportAction(
 
   const { rows, errors } = parseBulkText(text);
   let imported = 0;
+  const importedNames: string[] = [];
   const saveErrors: ImportRowError[] = [];
 
   // 正常な行だけを1行ずつ登録する(エラー行があっても他の行は登録する)
@@ -309,6 +322,7 @@ export async function bulkImportAction(
         items: row.items,
       });
       imported += 1;
+      importedNames.push(...row.items.map((i) => i.itemName));
     } catch (e) {
       console.error(`bulkImportAction: line ${row.line} failed:`, e);
       saveErrors.push({
@@ -319,6 +333,7 @@ export async function bulkImportAction(
   }
 
   if (imported > 0) {
+    await addNewNamesToMaster(importedNames);
     revalidatePath("/", "layout");
   }
   const allErrors = [...errors, ...saveErrors].sort((a, b) => a.line - b.line);

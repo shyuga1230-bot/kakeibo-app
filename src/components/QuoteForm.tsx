@@ -1,7 +1,8 @@
 "use client";
 // 見積もりの入力フォーム。新規登録と編集の両方で使う。
+// ・項目は商品マスタからプルダウンで選ぶ(表記ゆれ防止)。
+//   新しい商品のときだけ「＋ 新しい商品名を入力する」を選んで書く
 // ・項目行の追加/削除
-// ・過去の項目名のサジェスト(表記ゆれ防止)
 // ・日本語入力(IME)の変換確定 Enter で誤登録しないよう、
 //   1行入力欄では Enter でフォームを送信しない(登録はボタンでのみ実行)
 
@@ -13,7 +14,13 @@ import { normalizeItemName } from "@/lib/normalize";
 import { todayLocalISO } from "@/lib/format";
 import { notifyDataChanged } from "@/lib/events";
 
-type ItemRow = { key: number; name: string; amount: string };
+type ItemRow = {
+  key: number;
+  name: string;
+  amount: string;
+  /** true のとき「新しい商品名」をテキストで入力中 */
+  custom: boolean;
+};
 
 /** 見積書の読み取り結果などで、フォームに最初から入れておく内容 */
 export type QuoteFormPrefill = {
@@ -24,8 +31,7 @@ export type QuoteFormPrefill = {
 };
 
 type Props = {
-  suggestions: string[];
-  /** 商品マスタ(押すだけで項目に追加できるボタンとして表示) */
+  /** 商品マスタ(項目のプルダウンの選択肢になる) */
   masterItems?: { name: string; defaultAmount: number | null }[];
   /** 編集時のみ指定 */
   edit?: QuoteFormPrefill & { quoteId: number };
@@ -34,11 +40,11 @@ type Props = {
 };
 
 let nextKey = 1;
-function newRow(name = "", amount = ""): ItemRow {
-  return { key: nextKey++, name, amount };
+function newRow(name = "", amount = "", custom = false): ItemRow {
+  return { key: nextKey++, name, amount, custom };
 }
 
-export default function QuoteForm({ suggestions, masterItems, edit, prefill }: Props) {
+export default function QuoteForm({ masterItems, edit, prefill }: Props) {
   const router = useRouter();
   const isEdit = Boolean(edit);
   const initial = edit ?? prefill;
@@ -111,36 +117,37 @@ export default function QuoteForm({ suggestions, masterItems, edit, prefill }: P
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   };
 
-  // フォームに入力済みの項目名(正規化後)。商品ボタンの「追加済み」表示に使う
-  const enteredNames = new Set(
-    rows.map((r) => normalizeItemName(r.name)).filter((n) => n !== ""),
+  const masterNames = useMemo(
+    () => new Set((masterItems ?? []).map((m) => m.name)),
+    [masterItems],
   );
 
-  /** 商品ボタンを押したとき: 空の行があればそこへ、なければ行を追加 */
-  const addMasterItem = (name: string, defaultAmount: number | null) => {
-    if (enteredNames.has(name)) return;
-    const amount = defaultAmount == null ? "" : String(defaultAmount);
-    setRows((rs) => {
-      const emptyIndex = rs.findIndex(
-        (r) => r.name.trim() === "" && r.amount.trim() === "",
-      );
-      if (emptyIndex !== -1) {
-        const copy = [...rs];
-        copy[emptyIndex] = newRow(name, amount);
-        return copy;
-      }
-      return [...rs, newRow(name, amount)];
-    });
+  /** プルダウンで商品を選んだとき(「新しい商品名」を選ぶと入力欄に切り替わる) */
+  const handleSelect = (key: number, value: string) => {
+    if (value === "__new__") {
+      updateRow(key, { custom: true, name: "" });
+      return;
+    }
+    const master = (masterItems ?? []).find((m) => m.name === value);
+    setRows((rs) =>
+      rs.map((r) =>
+        r.key === key
+          ? {
+              ...r,
+              name: value,
+              // 金額が空なら標準金額を自動で入れる
+              amount:
+                r.amount.trim() === "" && master?.defaultAmount != null
+                  ? String(master.defaultAmount)
+                  : r.amount,
+            }
+          : r,
+      ),
+    );
   };
 
   return (
     <form action={formAction} onKeyDown={blockEnterSubmit} className="space-y-4">
-      <datalist id="item-suggestions">
-        {suggestions.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
-
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
           <span className="text-sm font-medium">
@@ -175,54 +182,42 @@ export default function QuoteForm({ suggestions, masterItems, edit, prefill }: P
           </span>
           <span className="text-xs text-slate-500">金額は空欄でもかまいません</span>
         </div>
-        {masterItems && masterItems.length > 0 && (
-          <div className="mt-1.5 rounded-md bg-slate-50 p-2">
-            <p className="text-xs text-slate-500">
-              登録済みの商品(押すと項目に追加されます):
-            </p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {masterItems.map((m) => {
-                const added = enteredNames.has(m.name);
-                return (
-                  <button
-                    key={m.name}
-                    type="button"
-                    onClick={() => addMasterItem(m.name, m.defaultAmount)}
-                    disabled={added}
-                    title={
-                      added
-                        ? "追加済みです"
-                        : m.defaultAmount != null
-                          ? `金額 ¥${m.defaultAmount.toLocaleString("ja-JP")} も自動で入ります`
-                          : undefined
-                    }
-                    className={`rounded-full border px-3 py-1 text-xs ${
-                      added
-                        ? "border-green-300 bg-green-50 text-green-700"
-                        : "border-blue-300 bg-white text-blue-800 hover:bg-blue-50"
-                    }`}
-                  >
-                    {added ? "✓ " : "+ "}
-                    {m.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
         <div className="mt-1 space-y-2">
           {rows.map((row, idx) => (
             <div key={row.key} className="flex items-center gap-2">
-              <input
-                type="text"
-                name="item_name"
-                list="item-suggestions"
-                value={row.name}
-                onChange={(e) => updateRow(row.key, { name: e.target.value })}
-                placeholder={idx === 0 ? "例: 3D起工測量" : "項目名"}
-                aria-label={`${idx + 1}行目の項目名`}
-                className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none"
-              />
+              {row.custom ? (
+                <input
+                  type="text"
+                  name="item_name"
+                  value={row.name}
+                  onChange={(e) => updateRow(row.key, { name: e.target.value })}
+                  placeholder="新しい商品名を入力"
+                  autoFocus
+                  aria-label={`${idx + 1}行目の新しい商品名`}
+                  className="min-w-0 flex-1 rounded-md border border-blue-400 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none"
+                />
+              ) : (
+                <>
+                  <select
+                    value={row.name}
+                    onChange={(e) => handleSelect(row.key, e.target.value)}
+                    aria-label={`${idx + 1}行目の商品`}
+                    className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="">商品を選ぶ…</option>
+                    {(masterItems ?? []).map((m) => (
+                      <option key={m.name} value={m.name}>
+                        {m.name}
+                      </option>
+                    ))}
+                    {row.name !== "" && !masterNames.has(row.name) && (
+                      <option value={row.name}>{row.name}</option>
+                    )}
+                    <option value="__new__">＋ 新しい商品名を入力する</option>
+                  </select>
+                  <input type="hidden" name="item_name" value={row.name} />
+                </>
+              )}
               <input
                 type="text"
                 name="item_amount"
@@ -256,6 +251,7 @@ export default function QuoteForm({ suggestions, masterItems, edit, prefill }: P
         </button>
         <p className="mt-1 text-xs text-slate-500">
           金額は「1,200,000」「¥1200000」「全角数字」のままでも登録できます。
+          新しい商品名で登録すると、自動で「商品管理」にも追加され、次回から選べるようになります。
         </p>
       </div>
 
