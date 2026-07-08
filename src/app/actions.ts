@@ -27,6 +27,12 @@ import {
   updateQuote,
   type QuoteInput,
 } from "@/lib/quotes";
+import {
+  createMasterItem,
+  deleteMasterItem,
+  importMasterItemsFromHistory,
+  updateMasterItem,
+} from "@/lib/items";
 
 const LOGIN_ERROR_WAIT_MS = 800; // 失敗時の待ち時間(下のロックアウトと併用)
 
@@ -326,4 +332,111 @@ export async function bulkImportAction(
     .join("\n");
 
   return { ok: true, imported, errors: allErrors, failedText };
+}
+
+// ---------------------------------------------------------------------------
+// 商品マスタの管理
+// ---------------------------------------------------------------------------
+
+/** 商品名と標準金額の入力チェック(登録・編集で共通) */
+function validateMasterItemForm(
+  formData: FormData,
+): { ok: true; name: string; defaultAmount: number | null } | { ok: false; error: string } {
+  const name = normalizeItemName(String(formData.get("name") ?? ""));
+  if (name === "") return { ok: false, error: "商品名を入力してください。" };
+  if (name.length > 100) {
+    return { ok: false, error: "商品名が長すぎます(100文字まで)。" };
+  }
+  const amountResult = parseAmount(String(formData.get("default_amount") ?? ""));
+  if (amountResult.error) {
+    return { ok: false, error: `標準${amountResult.error}。` };
+  }
+  return { ok: true, name, defaultAmount: amountResult.value };
+}
+
+function isUniqueError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
+}
+
+export async function createMasterItemAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  const validated = validateMasterItemForm(formData);
+  if (!validated.ok) return validated;
+  try {
+    await createMasterItem(validated.name, validated.defaultAmount);
+  } catch (e) {
+    if (isUniqueError(e)) {
+      return { ok: false, error: `「${validated.name}」はすでに登録されています。` };
+    }
+    console.error("createMasterItemAction failed:", e);
+    return { ok: false, error: "保存に失敗しました。もう一度お試しください。" };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: `「${validated.name}」を商品に登録しました。` };
+}
+
+export async function updateMasterItemAction(
+  itemId: number,
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    return { ok: false, error: "編集対象の商品が見つかりません。" };
+  }
+  const validated = validateMasterItemForm(formData);
+  if (!validated.ok) return validated;
+  try {
+    await updateMasterItem(itemId, validated.name, validated.defaultAmount);
+  } catch (e) {
+    if (isUniqueError(e)) {
+      return { ok: false, error: `「${validated.name}」はすでに登録されています。` };
+    }
+    console.error("updateMasterItemAction failed:", e);
+    return {
+      ok: false,
+      error: "保存に失敗しました。この商品はすでに削除されている可能性があります。",
+    };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "変更を保存しました。" };
+}
+
+export async function deleteMasterItemAction(itemId: number): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    return { ok: false, error: "削除対象の商品が見つかりません。" };
+  }
+  try {
+    await deleteMasterItem(itemId);
+  } catch (e) {
+    console.error("deleteMasterItemAction failed:", e);
+    return {
+      ok: false,
+      error: "削除に失敗しました。この商品はすでに削除されている可能性があります。",
+    };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "商品を削除しました。" };
+}
+
+export async function importMasterItemsAction(): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  try {
+    const count = await importMasterItemsFromHistory();
+    revalidatePath("/", "layout");
+    return {
+      ok: true,
+      message:
+        count === 0
+          ? "取り込める項目名はありませんでした(すべて登録済みです)。"
+          : `過去の見積もりから ${count} 件の商品名を取り込みました。`,
+    };
+  } catch (e) {
+    console.error("importMasterItemsAction failed:", e);
+    return { ok: false, error: "取り込みに失敗しました。もう一度お試しください。" };
+  }
 }

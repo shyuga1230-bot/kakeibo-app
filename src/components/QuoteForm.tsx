@@ -25,6 +25,8 @@ export type QuoteFormPrefill = {
 
 type Props = {
   suggestions: string[];
+  /** 商品マスタ(押すだけで項目に追加できるボタンとして表示) */
+  masterItems?: { name: string; defaultAmount: number | null }[];
   /** 編集時のみ指定 */
   edit?: QuoteFormPrefill & { quoteId: number };
   /** 新規登録時に、あらかじめ入れておく内容(見積書の読み取り結果など) */
@@ -36,7 +38,7 @@ function newRow(name = "", amount = ""): ItemRow {
   return { key: nextKey++, name, amount };
 }
 
-export default function QuoteForm({ suggestions, edit, prefill }: Props) {
+export default function QuoteForm({ suggestions, masterItems, edit, prefill }: Props) {
   const router = useRouter();
   const isEdit = Boolean(edit);
   const initial = edit ?? prefill;
@@ -109,6 +111,28 @@ export default function QuoteForm({ suggestions, edit, prefill }: Props) {
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   };
 
+  // フォームに入力済みの項目名(正規化後)。商品ボタンの「追加済み」表示に使う
+  const enteredNames = new Set(
+    rows.map((r) => normalizeItemName(r.name)).filter((n) => n !== ""),
+  );
+
+  /** 商品ボタンを押したとき: 空の行があればそこへ、なければ行を追加 */
+  const addMasterItem = (name: string, defaultAmount: number | null) => {
+    if (enteredNames.has(name)) return;
+    const amount = defaultAmount == null ? "" : String(defaultAmount);
+    setRows((rs) => {
+      const emptyIndex = rs.findIndex(
+        (r) => r.name.trim() === "" && r.amount.trim() === "",
+      );
+      if (emptyIndex !== -1) {
+        const copy = [...rs];
+        copy[emptyIndex] = newRow(name, amount);
+        return copy;
+      }
+      return [...rs, newRow(name, amount)];
+    });
+  };
+
   return (
     <form action={formAction} onKeyDown={blockEnterSubmit} className="space-y-4">
       <datalist id="item-suggestions">
@@ -151,6 +175,41 @@ export default function QuoteForm({ suggestions, edit, prefill }: Props) {
           </span>
           <span className="text-xs text-slate-500">金額は空欄でもかまいません</span>
         </div>
+        {masterItems && masterItems.length > 0 && (
+          <div className="mt-1.5 rounded-md bg-slate-50 p-2">
+            <p className="text-xs text-slate-500">
+              登録済みの商品(押すと項目に追加されます):
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {masterItems.map((m) => {
+                const added = enteredNames.has(m.name);
+                return (
+                  <button
+                    key={m.name}
+                    type="button"
+                    onClick={() => addMasterItem(m.name, m.defaultAmount)}
+                    disabled={added}
+                    title={
+                      added
+                        ? "追加済みです"
+                        : m.defaultAmount != null
+                          ? `金額 ¥${m.defaultAmount.toLocaleString("ja-JP")} も自動で入ります`
+                          : undefined
+                    }
+                    className={`rounded-full border px-3 py-1 text-xs ${
+                      added
+                        ? "border-green-300 bg-green-50 text-green-700"
+                        : "border-blue-300 bg-white text-blue-800 hover:bg-blue-50"
+                    }`}
+                  >
+                    {added ? "✓ " : "+ "}
+                    {m.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <div className="mt-1 space-y-2">
           {rows.map((row, idx) => (
             <div key={row.key} className="flex items-center gap-2">

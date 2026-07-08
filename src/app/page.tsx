@@ -2,13 +2,21 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getItemNameSuggestions } from "@/lib/quotes";
+import { listMasterItems } from "@/lib/items";
 import RegisterPanel from "@/components/RegisterPanel";
 import BulkImport from "@/components/BulkImport";
 
 export default async function RegisterPage() {
   if (!(await getSession())) redirect("/login");
 
-  const suggestions = await getItemNameSuggestions();
+  const [historyNames, masterItems] = await Promise.all([
+    getItemNameSuggestions(),
+    listMasterItems(),
+  ]);
+  // 入力候補は「商品マスタ + 過去に登録された名前」を重複なしで
+  const suggestions = [
+    ...new Set([...masterItems.map((m) => m.name), ...historyNames]),
+  ];
 
   return (
     <div className="space-y-6">
@@ -19,7 +27,7 @@ export default async function RegisterPage() {
           Excelの見積書を貼り付けて自動入力することもできます。
         </p>
         <div className="mt-4">
-          <RegisterPanel suggestions={suggestions} />
+          <RegisterPanel suggestions={suggestions} masterItems={masterItems} />
         </div>
       </section>
 

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { getItemNameSuggestions, getQuote } from "@/lib/quotes";
+import { listMasterItems } from "@/lib/items";
 import QuoteForm from "@/components/QuoteForm";
 
 export const metadata = { title: "見積もりの編集 | 見積もり併売データベース" };
@@ -19,10 +20,14 @@ export default async function EditQuotePage({
   const quoteId = Number.parseInt(id, 10);
   if (!Number.isInteger(quoteId) || quoteId <= 0) notFound();
 
-  const [quote, suggestions] = await Promise.all([
+  const [quote, historyNames, masterItems] = await Promise.all([
     getQuote(quoteId),
     getItemNameSuggestions(),
+    listMasterItems(),
   ]);
+  const suggestions = [
+    ...new Set([...masterItems.map((m) => m.name), ...historyNames]),
+  ];
   if (!quote) notFound();
 
   return (
@@ -42,6 +47,7 @@ export default async function EditQuotePage({
         <div className="mt-4">
           <QuoteForm
             suggestions={suggestions}
+            masterItems={masterItems}
             edit={{
               quoteId: quote.id,
               quoteDate: quote.quoteDate,
