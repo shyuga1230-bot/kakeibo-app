@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# prisma (自動生成されるファイル・ローカルDBデータ)
+/src/generated/
+/.prisma/
 
 # vercel
 .vercel

@@ -1,27 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #F8F9FF;
-  --foreground: #1a1a2e;
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
-    'Noto Sans JP', sans-serif;
-  -webkit-font-smoothing: antialiased;
+  @apply bg-slate-100 text-slate-800 antialiased;
 }
 
-.safe-area-pb {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-input[type='number']::-webkit-inner-spin-button,
-input[type='number']::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type='number'] {
-  -moz-appearance: textfield;
+/* 数字の桁が揃うようにする(サマリーや金額表示用) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
