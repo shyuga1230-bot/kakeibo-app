@@ -1,0 +1,42 @@
+// データベースの設計図(Prisma スキーマ)
+// 表は2つ: quotes(見積もり) と quote_items(明細)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 見積もり(案件)1件
+model Quote {
+  id           Int         @id @default(autoincrement())
+  // 日付は "YYYY-MM-DD" 形式の文字列で保存する(タイムゾーンのずれを防ぐため)
+  quoteDate    String      @map("quote_date")
+  customerName String?     @map("customer_name")
+  memo         String?
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  items        QuoteItem[]
+
+  @@index([quoteDate])
+  @@map("quotes")
+}
+
+// 見積もりの明細(売れた項目)1行
+model QuoteItem {
+  id       Int    @id @default(autoincrement())
+  quoteId  Int    @map("quote_id")
+  itemName String @map("item_name")
+  // 金額(円・整数)。不明な場合は空(NULL)でよい
+  amount   Int?
+  // 親の見積もりが削除されたら明細も一緒に削除される(onDelete: Cascade)
+  quote    Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  // 同じ見積もりの中に同じ項目名は登録できない
+  @@unique([quoteId, itemName])
+  @@index([itemName])
+  @@map("quote_items")
+}
