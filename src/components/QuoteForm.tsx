@@ -15,16 +15,20 @@ import { notifyDataChanged } from "@/lib/events";
 
 type ItemRow = { key: number; name: string; amount: string };
 
+/** 見積書の読み取り結果などで、フォームに最初から入れておく内容 */
+export type QuoteFormPrefill = {
+  quoteDate: string;
+  customerName: string;
+  memo: string;
+  items: { name: string; amount: string }[];
+};
+
 type Props = {
   suggestions: string[];
   /** 編集時のみ指定 */
-  edit?: {
-    quoteId: number;
-    quoteDate: string;
-    customerName: string;
-    memo: string;
-    items: { name: string; amount: string }[];
-  };
+  edit?: QuoteFormPrefill & { quoteId: number };
+  /** 新規登録時に、あらかじめ入れておく内容(見積書の読み取り結果など) */
+  prefill?: QuoteFormPrefill;
 };
 
 let nextKey = 1;
@@ -32,16 +36,17 @@ function newRow(name = "", amount = ""): ItemRow {
   return { key: nextKey++, name, amount };
 }
 
-export default function QuoteForm({ suggestions, edit }: Props) {
+export default function QuoteForm({ suggestions, edit, prefill }: Props) {
   const router = useRouter();
   const isEdit = Boolean(edit);
+  const initial = edit ?? prefill;
 
-  const [date, setDate] = useState(edit?.quoteDate ?? "");
-  const [customer, setCustomer] = useState(edit?.customerName ?? "");
-  const [memo, setMemo] = useState(edit?.memo ?? "");
+  const [date, setDate] = useState(initial?.quoteDate ?? "");
+  const [customer, setCustomer] = useState(initial?.customerName ?? "");
+  const [memo, setMemo] = useState(initial?.memo ?? "");
   const [rows, setRows] = useState<ItemRow[]>(() =>
-    edit && edit.items.length > 0
-      ? edit.items.map((i) => newRow(i.name, i.amount))
+    initial && initial.items.length > 0
+      ? initial.items.map((i) => newRow(i.name, i.amount))
       : [newRow()],
   );
 
