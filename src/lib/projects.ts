@@ -164,7 +164,7 @@ export async function upsertStage(
       create: { projectId, stageKey, ...input },
       update: { ...input },
     }),
-    // 案件の「最終更新」も動かす(一覧の並び・自動再読み込みの目印になる)
+    // 案件の「最終更新」も動かす(CSVの「最終更新日」列に反映される)
     getPrisma().project.update({
       where: { id: projectId },
       data: { updatedAt: new Date(), logs: { create: { action } } },

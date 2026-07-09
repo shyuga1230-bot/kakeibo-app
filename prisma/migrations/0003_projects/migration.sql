@@ -38,9 +38,6 @@ CREATE TABLE "project_logs" (
 CREATE INDEX "projects_client_name_idx" ON "projects"("client_name");
 
 -- CreateIndex
-CREATE INDEX "projects_updated_at_idx" ON "projects"("updated_at");
-
--- CreateIndex
 CREATE UNIQUE INDEX "project_stages_project_id_stage_key_key" ON "project_stages"("project_id", "stage_key");
 
 -- CreateIndex

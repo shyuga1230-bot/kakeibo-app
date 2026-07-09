@@ -2,7 +2,7 @@
 // 案件管理の画面でヘッダーに常時表示するサマリー4項目。
 // ページ移動・タブの再表示・データ変更(登録/編集/削除)のたびに集計し直す。
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PROJECT_DATA_CHANGED_EVENT } from "@/lib/events";
 import { formatYen } from "@/lib/format";
@@ -23,13 +23,18 @@ export default function ProjectSummaryBar() {
   const pathname = usePathname();
   const [state, setState] = useState<State>({ status: "loading" });
 
+  // 後から始めた読み込みを優先し、遅れて届いた古い応答は捨てる
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     try {
       const res = await fetch("/api/projects/summary", { cache: "no-store" });
       if (!res.ok) throw new Error(`status ${res.status}`);
       const data: ProjectSummary = await res.json();
+      if (seq !== loadSeq.current) return;
       setState({ status: "ok", data });
     } catch {
+      if (seq !== loadSeq.current) return;
       setState((prev) => ({ status: "error", data: prev.data }));
     }
   }, []);

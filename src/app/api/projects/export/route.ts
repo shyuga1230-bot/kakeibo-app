@@ -28,7 +28,7 @@ export async function GET() {
       })),
     );
     const csv = buildCsv(rows);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toJstDateString(new Date());
     return new NextResponse(csv, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",

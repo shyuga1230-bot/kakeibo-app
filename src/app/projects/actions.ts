@@ -10,6 +10,7 @@ import {
   isStageKey,
   isStageStatus,
   stageLabel,
+  stageState,
   type StageKey,
 } from "@/lib/project-stages";
 import {
@@ -182,6 +183,12 @@ export type StageUpdatePayload = {
   /** "YYYY-MM-DD" または空文字(日付なし) */
   date: string;
   memo: string;
+  /** ダイアログを開いた時点の値。他の人が先に変更していたら保存せずに知らせる */
+  expected?: {
+    status: string;
+    date: string | null;
+    memo: string | null;
+  };
 };
 
 /** 一覧表のセルから呼ばれる: 工程1マスの状態を変更する */
@@ -213,6 +220,22 @@ export async function updateStageAction(
         error: "この案件はすでに削除されています。一覧を再読み込みしてください。",
       };
     }
+    // ダイアログを開いてから保存するまでの間に、他の人が同じマスを変更していないか確認する
+    const expected = payload.expected;
+    if (expected && typeof expected === "object") {
+      const current = stageState(existing.stages, stageKeyRaw);
+      const changedByOthers =
+        current.status !== String(expected.status ?? "") ||
+        (current.date ?? null) !== (expected.date ?? null) ||
+        (current.memo ?? null) !== (expected.memo ?? null);
+      if (changedByOthers) {
+        return {
+          ok: false,
+          error:
+            "このマスは、開いている間に他の人が変更しました。いったんキャンセルして最新の内容を確認してから、もう一度変更してください。",
+        };
+      }
+    }
     await upsertStage(projectId, stageKeyRaw, validated.input);
   } catch (e) {
     console.error("updateStageAction failed:", e);
@@ -236,6 +259,20 @@ export async function updateStagesAction(
   for (const stage of STAGES) {
     const statusRaw = formData.get(`stage_status_${stage.key}`);
     if (statusRaw == null) continue; // フォームに無い工程は変更しない
+
+    // 画面を開いた時点の値(基準値)と同じ工程は「触っていない」ので保存しない。
+    // こうすることで、他の人が同時に変えた工程を古い値で上書きしてしまわない。
+    const baseStatus = formData.get(`stage_base_status_${stage.key}`);
+    if (baseStatus != null) {
+      const untouched =
+        String(statusRaw) === String(baseStatus) &&
+        String(formData.get(`stage_date_${stage.key}`) ?? "") ===
+          String(formData.get(`stage_base_date_${stage.key}`) ?? "") &&
+        String(formData.get(`stage_memo_${stage.key}`) ?? "") ===
+          String(formData.get(`stage_base_memo_${stage.key}`) ?? "");
+      if (untouched) continue;
+    }
+
     const validated = validateStageInput(
       String(statusRaw),
       String(formData.get(`stage_date_${stage.key}`) ?? ""),

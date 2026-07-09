@@ -1,8 +1,9 @@
 "use client";
 // 案件詳細ページの工程一覧。13工程の状態・日付・メモをまとめて編集して保存する。
+// 画面を開いた時点の値(基準値)も一緒に送り、サーバー側は「自分が変えた工程だけ」を
+// 保存する(他の人が同時に変えた工程を、古い値で上書きしてしまわないように)。
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
 import { updateStagesAction } from "@/app/projects/actions";
 import type { ActionResult } from "@/app/actions";
@@ -24,47 +25,56 @@ type Props = {
   stages: StageStateMap;
 };
 
+function toRows(stages: StageStateMap): Record<StageKey, Row> {
+  const rows = {} as Record<StageKey, Row>;
+  for (const s of STAGES) {
+    const st = stages[s.key];
+    rows[s.key] = {
+      status: st?.status ?? "not_started",
+      date: st?.date ?? "",
+      memo: st?.memo ?? "",
+    };
+  }
+  return rows;
+}
+
 export default function ProjectStageEditor({ projectId, stages }: Props) {
-  const router = useRouter();
-  const [rows, setRows] = useState<Record<StageKey, Row>>(() => {
-    const init = {} as Record<StageKey, Row>;
-    for (const s of STAGES) {
-      const st = stages[s.key];
-      init[s.key] = {
-        status: st?.status ?? "not_started",
-        date: st?.date ?? "",
-        memo: st?.memo ?? "",
-      };
-    }
-    return init;
-  });
+  const [rows, setRows] = useState<Record<StageKey, Row>>(() => toRows(stages));
+  // 比較の基準値(画面を開いた時点の値。保存成功のたびに今の入力内容へ更新する)
+  const baseline = useRef<Record<StageKey, Row>>(toRows(stages));
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
 
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     updateStagesAction.bind(null, projectId),
     null,
   );
 
-  // 保存成功したらヘッダーの集計・更新履歴の表示を読み込み直す
+  // 保存成功したらヘッダーの集計・更新履歴の表示を読み込み直してもらう
   const handled = useRef<ActionResult | null>(null);
   useEffect(() => {
     if (!state || handled.current === state) return;
     handled.current = state;
     if (state.ok) {
+      baseline.current = rowsRef.current;
       notifyProjectDataChanged();
-      router.refresh();
     }
-  }, [state, router]);
+  }, [state]);
 
   const setRow = (key: StageKey, patch: Partial<Row>) => {
     setRows((prev) => {
       const next = { ...prev[key], ...patch };
-      // 「進行中」「完了」に変えたとき、日付が空なら今日を自動で入れる
-      if (
-        patch.status &&
-        (patch.status === "in_progress" || patch.status === "done") &&
-        next.date === ""
-      ) {
-        next.date = todayLocalISO();
+      if (patch.status) {
+        if (
+          (patch.status === "in_progress" || patch.status === "done") &&
+          next.date === ""
+        ) {
+          // 「進行中」「完了」に変えたとき、日付が空なら今日を自動で入れる
+          next.date = todayLocalISO();
+        } else if (patch.status === "not_started" || patch.status === "not_applicable") {
+          // 「未着手」「対象外」に戻したら日付は消す
+          next.date = "";
+        }
       }
       return { ...prev, [key]: next };
     });
@@ -85,6 +95,7 @@ export default function ProjectStageEditor({ projectId, stages }: Props) {
           <tbody>
             {STAGES.map((s, index) => {
               const row = rows[s.key];
+              const base = baseline.current[s.key];
               const def = statusDef(row.status);
               return (
                 <tr key={s.key} className="border-t border-slate-100">
@@ -138,6 +149,10 @@ export default function ProjectStageEditor({ projectId, stages }: Props) {
                       aria-label={`「${s.label}」のメモ`}
                       className="w-full min-w-32 rounded-md border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
                     />
+                    {/* 画面を開いた時点の値。サーバー側で「変えた工程だけ保存」の判定に使う */}
+                    <input type="hidden" name={`stage_base_status_${s.key}`} value={base.status} />
+                    <input type="hidden" name={`stage_base_date_${s.key}`} value={base.date} />
+                    <input type="hidden" name={`stage_base_memo_${s.key}`} value={base.memo} />
                   </td>
                 </tr>
               );

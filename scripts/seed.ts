@@ -161,10 +161,15 @@ const PROJECT_SEEDS: ProjectSeed[] = [
 ];
 
 async function seedProjects(force: boolean): Promise<void> {
-  const existing = await prisma.project.count();
-  if (existing > 0 && !force) {
+  // 見積もりだけ運用中のデータベースに、案件のサンプルが紛れ込まないように
+  // 「どちらかにデータがあればスキップ」とする
+  const [existingProjects, existingQuotes] = await Promise.all([
+    prisma.project.count(),
+    prisma.quote.count(),
+  ]);
+  if ((existingProjects > 0 || existingQuotes > 0) && !force) {
     console.log(
-      `すでに ${existing} 件の案件が登録されているため、案件のサンプルは追加しませんでした。`,
+      "すでにデータが登録されているため、案件のサンプルは追加しませんでした。",
     );
     return;
   }

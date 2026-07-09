@@ -108,6 +108,7 @@ export default async function ProjectsDashboardPage() {
   if (projects.length === 0) {
     return (
       <div className="space-y-4">
+        <AutoRefresh />
         <ProjectsTabs active="dashboard" />
         <div className="rounded-xl bg-white p-8 text-center shadow-sm">
           <p className="text-slate-600">まだ案件が登録されていません。</p>

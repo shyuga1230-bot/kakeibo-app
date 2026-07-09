@@ -8,6 +8,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -67,9 +68,12 @@ function StageEditDialog({
 
   const pickStatus = (next: (typeof STATUSES)[number]["key"]) => {
     setStatus(next);
-    // 「進行中」「完了」を選んだとき、日付が空なら今日を自動で入れる(そのまま変更できる)
     if ((next === "in_progress" || next === "done") && date === "") {
+      // 「進行中」「完了」を選んだとき、日付が空なら今日を自動で入れる(そのまま変更できる)
       setDate(todayLocalISO());
+    } else if (next === "not_started" || next === "not_applicable") {
+      // 「未着手」「対象外」に戻したら日付は消す
+      setDate("");
     }
   };
 
@@ -81,11 +85,19 @@ function StageEditDialog({
         status,
         date,
         memo,
+        // ダイアログを開いた時点の値。他の人が先に変更していたら保存せずに知らせてもらう
+        expected: {
+          status: current.status,
+          date: current.date,
+          memo: current.memo,
+        },
       });
       if (result.ok) {
         onSaved();
       } else {
         setError(result.error);
+        // 他の人の変更が原因の場合に備えて、ダイアログの後ろの一覧は最新にしておく
+        notifyProjectDataChanged();
       }
     });
   };
@@ -215,14 +227,19 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
 
   // 一覧データを読み直す。画面の再描画をNext.jsのルーターに頼らず、
   // APIから直接取得する(確実に反映されるように)。
+  // 後から始めた読み込みを優先し、遅れて届いた古い応答は捨てる(保存直後の巻き戻り防止)。
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     try {
       const res = await fetch("/api/projects/board", { cache: "no-store" });
       if (!res.ok) throw new Error(`status ${res.status}`);
       const data: { projects: BoardProject[] } = await res.json();
+      if (seq !== loadSeq.current) return;
       setProjects(data.projects);
       setLoadError(false);
     } catch {
+      if (seq !== loadSeq.current) return;
       setLoadError(true); // 直前のデータは残したまま、注意書きだけ出す
     }
   }, []);

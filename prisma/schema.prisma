@@ -58,7 +58,6 @@ model Project {
   logs        ProjectLog[]
 
   @@index([clientName])
-  @@index([updatedAt])
   @@map("projects")
 }
 

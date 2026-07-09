@@ -2,7 +2,6 @@
 // 案件詳細ページの基本情報(社名・協力会社・案件名・備考)の編集フォーム。
 
 import { useActionState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
 import { updateProjectAction } from "@/app/projects/actions";
 import type { ActionResult } from "@/app/actions";
@@ -19,22 +18,18 @@ type Props = {
 };
 
 export default function ProjectEditForm({ project }: Props) {
-  const router = useRouter();
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     updateProjectAction.bind(null, project.id),
     null,
   );
 
-  // 保存成功したらヘッダーの集計・ページ表示を読み込み直す
+  // 保存成功したらヘッダーの集計・更新履歴の表示を読み込み直してもらう
   const handled = useRef<ActionResult | null>(null);
   useEffect(() => {
     if (!state || handled.current === state) return;
     handled.current = state;
-    if (state.ok) {
-      notifyProjectDataChanged();
-      router.refresh();
-    }
-  }, [state, router]);
+    if (state.ok) notifyProjectDataChanged();
+  }, [state]);
 
   return (
     <form action={formAction} className="space-y-3">
