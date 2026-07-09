@@ -1,10 +1,11 @@
-// 動作確認用のサンプルデータ(架空の見積もり20件)を投入するスクリプト。
+// 動作確認用のサンプルデータ(架空の見積もり20件と案件8件)を投入するスクリプト。
 // 実行方法: npm run db:seed
 // すでにデータがある場合は追加せずに終了する(--force を付けると追加する)。
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { normalizeItemName } from "../src/lib/normalize";
+import type { StageKey, StageStatus } from "../src/lib/project-stages";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -47,8 +48,155 @@ const SEEDS: Seed[] = [
   { date: "2026-06-24", customer: "森田興業", items: [["出来形管理ソフト", 305000], ["操作講習", 78000]] },
 ];
 
+// 架空の案件8件(案件管理表の動作確認用)。
+// stages は「工程キー: [状態, 日付]」。書いていない工程は未着手のまま。
+type ProjectSeed = {
+  client: string | null;
+  partner: string | null;
+  name: string;
+  memo?: string;
+  stages: Partial<Record<StageKey, [StageStatus, string | null]>>;
+};
+
+const PROJECT_SEEDS: ProjectSeed[] = [
+  {
+    client: "山田建設",
+    partner: "青空測量",
+    name: "国道○号 道路改良工事",
+    memo: "起工測量の成果待ち。6月末までにICONファイル納品予定。",
+    stages: {
+      contractor_data: ["done", "2026-05-10"],
+      ark_estimate: ["done", "2026-05-14"],
+      estimate_proposal: ["done", "2026-05-20"],
+      utilization_plan: ["done", "2026-05-28"],
+      engineer_meeting: ["done", "2026-06-03"],
+      government_estimate: ["not_applicable", null],
+      construction_plan: ["done", "2026-06-10"],
+      groundbreaking_survey: ["done", "2026-06-18"],
+      survey_deliverable: ["in_progress", "2026-06-24"],
+    },
+  },
+  {
+    client: "佐藤工務店",
+    partner: null,
+    name: "△△川 河川改修工事",
+    stages: {
+      contractor_data: ["done", "2026-06-01"],
+      ark_estimate: ["done", "2026-06-05"],
+      estimate_proposal: ["in_progress", "2026-06-09"],
+    },
+  },
+  {
+    client: "高橋土木",
+    partner: "青空測量",
+    name: "□□団地 造成工事",
+    memo: "技術者打合せは現場事務所で実施予定。",
+    stages: {
+      contractor_data: ["done", "2026-05-22"],
+      ark_estimate: ["done", "2026-05-26"],
+      estimate_proposal: ["done", "2026-06-02"],
+      utilization_plan: ["in_progress", "2026-06-16"],
+      engineer_meeting: ["in_progress", "2026-06-20"],
+    },
+  },
+  {
+    client: "伊藤組",
+    partner: "ひかりドローンサービス",
+    name: "市道◇◇線 舗装補修工事",
+    stages: {
+      contractor_data: ["in_progress", "2026-06-25"],
+    },
+  },
+  {
+    client: "渡辺建設",
+    partner: null,
+    name: "○○排水路 整備工事",
+    memo: "全工程完了。竣工後の追加提案を検討中。",
+    stages: {
+      contractor_data: ["done", "2026-04-03"],
+      ark_estimate: ["done", "2026-04-08"],
+      estimate_proposal: ["done", "2026-04-15"],
+      utilization_plan: ["done", "2026-04-22"],
+      engineer_meeting: ["done", "2026-04-30"],
+      government_estimate: ["done", "2026-05-08"],
+      construction_plan: ["done", "2026-05-15"],
+      groundbreaking_survey: ["done", "2026-05-22"],
+      survey_deliverable: ["done", "2026-05-29"],
+      construction_data: ["done", "2026-06-05"],
+      asbuilt_survey: ["done", "2026-06-12"],
+      icon_file: ["done", "2026-06-19"],
+      after_follow: ["done", "2026-06-26"],
+    },
+  },
+  {
+    client: "中村工業",
+    partner: "青空測量",
+    name: "△△地区 圃場整備工事",
+    stages: {
+      contractor_data: ["done", "2026-06-12"],
+      ark_estimate: ["in_progress", "2026-06-18"],
+    },
+  },
+  {
+    client: "小林建設",
+    partner: null,
+    name: "◇◇トンネル 取付道路工事",
+    memo: "役所見積の回答待ち。",
+    stages: {
+      contractor_data: ["done", "2026-05-30"],
+      ark_estimate: ["done", "2026-06-04"],
+      estimate_proposal: ["done", "2026-06-11"],
+      utilization_plan: ["done", "2026-06-17"],
+      engineer_meeting: ["done", "2026-06-20"],
+      government_estimate: ["in_progress", "2026-06-24"],
+    },
+  },
+  {
+    client: null,
+    partner: null,
+    name: "(仮)○○地区 宅地造成",
+    memo: "受注前の相談段階。社名は確定後に入力する。",
+    stages: {},
+  },
+];
+
+async function seedProjects(force: boolean): Promise<void> {
+  // 見積もりだけ運用中のデータベースに、案件のサンプルが紛れ込まないように
+  // 「どちらかにデータがあればスキップ」とする
+  const [existingProjects, existingQuotes] = await Promise.all([
+    prisma.project.count(),
+    prisma.quote.count(),
+  ]);
+  if ((existingProjects > 0 || existingQuotes > 0) && !force) {
+    console.log(
+      "すでにデータが登録されているため、案件のサンプルは追加しませんでした。",
+    );
+    return;
+  }
+  for (const seed of PROJECT_SEEDS) {
+    await prisma.project.create({
+      data: {
+        clientName: seed.client,
+        partnerName: seed.partner,
+        projectName: seed.name,
+        memo: seed.memo ?? null,
+        stages: {
+          create: Object.entries(seed.stages).map(([stageKey, [status, date]]) => ({
+            stageKey,
+            status,
+            date,
+          })),
+        },
+        logs: { create: { action: "案件を登録しました(サンプルデータ)" } },
+      },
+    });
+  }
+  console.log(`案件のサンプルデータ ${PROJECT_SEEDS.length} 件を登録しました。`);
+}
+
 async function main() {
   const force = process.argv.includes("--force");
+  await seedProjects(force);
   const existing = await prisma.quote.count();
   if (existing > 0 && !force) {
     console.log(

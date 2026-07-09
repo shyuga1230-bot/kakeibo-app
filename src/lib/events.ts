@@ -8,3 +8,12 @@ export function notifyDataChanged(): void {
     window.dispatchEvent(new Event(DATA_CHANGED_EVENT));
   }
 }
+
+// 案件管理のデータが変わったとき用(ヘッダーの案件サマリーが再集計される)
+export const PROJECT_DATA_CHANGED_EVENT = "project-data-changed";
+
+export function notifyProjectDataChanged(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(PROJECT_DATA_CHANGED_EVENT));
+  }
+}
