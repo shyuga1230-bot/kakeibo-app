@@ -230,6 +230,94 @@ test("合計行の後に明細らしき行が残っていたら注意書きを�
   assert.ok(result.data.warnings.some((w) => w.includes("合計行より後")));
 });
 
+// --- 「余計なものを読み取らない」ための回帰テスト --------------------------
+
+test("金額が空の行(区分名・備考)は項目にせず、まとめて知らせる", () => {
+  const sheet = tsv([
+    ["テスト商事", "御中"],
+    ["品名", "数量", "金額"],
+    ["ICT土工", "", ""], // 区分名(金額なし)
+    ["3D起工測量", "1", "450,000"],
+    ["現場写真はデータ納品", "", ""], // 備考(金額なし)
+    ["合計", "", "450,000"],
+  ]);
+  const result = parseQuoteSheet(sheet);
+  assert.ok(result.ok, JSON.stringify(result));
+  if (!result.ok) return;
+  assert.deepEqual(result.data.items, [{ itemName: "3D起工測量", amount: 450000 }]);
+  assert.ok(
+    result.data.warnings.some(
+      (w) => w.includes("金額が入っていない") && w.includes("ICT土工"),
+    ),
+  );
+});
+
+test("「以下余白」や「※注記」の行は項目にしない(警告にも出さない)", () => {
+  const sheet = tsv([
+    ["テスト商事", "御中"],
+    ["品名", "金額"],
+    ["測量", "100,000"],
+    ["※現場条件により変動します", ""],
+    ["以下余白", ""],
+    ["合計", "100,000"],
+  ]);
+  const result = parseQuoteSheet(sheet);
+  assert.ok(result.ok);
+  if (!result.ok) return;
+  assert.deepEqual(result.data.items.map((i) => i.itemName), ["測量"]);
+  assert.ok(!result.data.warnings.some((w) => w.includes("余白")));
+  assert.ok(!result.data.warnings.some((w) => w.includes("現場条件")));
+});
+
+test("「計」だけの行では止まらず、項目にもしない", () => {
+  const sheet = tsv([
+    ["テスト商事", "御中"],
+    ["品名", "金額"],
+    ["測量A", "100,000"],
+    ["計", "100,000"],
+    ["講習B", "50,000"],
+    ["合計", "150,000"],
+  ]);
+  const result = parseQuoteSheet(sheet);
+  assert.ok(result.ok);
+  if (!result.ok) return;
+  assert.deepEqual(
+    result.data.items.map((i) => i.itemName),
+    ["測量A", "講習B"],
+  );
+});
+
+test("見出しが「名称」「金額(円)」でも明細を読み取れる", () => {
+  const sheet = tsv([
+    ["テスト商事", "御中"],
+    ["名称", "数量", "金額(円)"],
+    ["3D起工測量", "1", "450,000"],
+    ["合計", "", "450,000"],
+  ]);
+  const result = parseQuoteSheet(sheet);
+  assert.ok(result.ok, JSON.stringify(result));
+  if (!result.ok) return;
+  assert.deepEqual(result.data.items, [{ itemName: "3D起工測量", amount: 450000 }]);
+});
+
+test("セル結合で項目名の列がずれていても、金額がある行は読み取れる", () => {
+  const sheet = tsv([
+    ["テスト商事", "御中"],
+    ["費目・工種", "", "", "数量", "単位", "金額"],
+    ["3D起工測量", "", "", "1", "式", "450,000"],
+    ["", "ICT建機レンタル", "", "1", "式", "1,200,000"], // 名前列が1つ右にずれた行
+    ["", "・備考はここに書きます", "", "", "", ""], // 金額なしの注記はずれていても拾わない
+    ["", "合計", "", "", "", "1,650,000"],
+  ]);
+  const result = parseQuoteSheet(sheet);
+  assert.ok(result.ok, JSON.stringify(result));
+  if (!result.ok) return;
+  assert.deepEqual(result.data.items, [
+    { itemName: "3D起工測量", amount: 450000 },
+    { itemName: "ICT建機レンタル", amount: 1200000 },
+  ]);
+});
+
 test("支払条件の文章(・工事代金のお支払い…)をメモに拾わない", () => {
   const sheet = tsv([
     ["テスト商事", "御中"],

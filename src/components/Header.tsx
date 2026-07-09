@@ -53,13 +53,11 @@ function HeaderShell({ children }: { children: React.ReactNode }) {
 /** Arkのロゴとアプリ名(ヘッダー用) */
 function Brand() {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <ArkLogo size={34} />
-      <h1 className="min-w-0 leading-tight">
-        <span className="block text-lg font-extrabold tracking-wide text-blue-700 sm:text-xl">
-          Ark
-        </span>
-        <span className="block truncate text-[11px] font-medium tracking-wider text-slate-500 sm:text-xs">
+    <div className="flex min-w-0 items-center gap-2">
+      <ArkLogo size={30} />
+      <h1 className="flex min-w-0 items-baseline gap-2 leading-none">
+        <span className="text-lg font-extrabold tracking-wide text-blue-700">Ark</span>
+        <span className="hidden truncate text-[11px] font-medium tracking-wider text-slate-500 lg:inline">
           見積・案件データベース
         </span>
       </h1>
@@ -84,17 +82,44 @@ export default function Header() {
 
   return (
     <HeaderShell>
-      <div className="mx-auto max-w-5xl px-4 pt-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Brand />
-          <div className="flex items-center gap-1 text-xs">
+      {/* 1行目: ロゴ・画面切り替え・CSV/ログアウト(スマホではナビが下の行に折り返す) */}
+      <div className="mx-auto max-w-5xl px-4">
+        <div className="flex flex-wrap items-center gap-x-3">
+          <div className="py-2">
+            <Brand />
+          </div>
+          <nav
+            className="order-last -mb-px flex w-full gap-0.5 sm:order-none sm:ml-3 sm:w-auto sm:self-stretch"
+            aria-label="画面の切り替え"
+          >
+            {NAV.map(({ href, label, icon: Icon }) => {
+              const active =
+                href === "/" ? pathname === "/" : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 px-1.5 py-2.5 text-sm font-medium sm:flex-none sm:px-4 ${
+                    active
+                      ? "border-blue-600 font-semibold text-blue-700"
+                      : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                  }`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon className="h-4 w-4" aria-hidden />
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="ml-auto flex items-center gap-1 py-2 text-xs">
             <a
               href={section.exportHref}
               className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               title={section.exportTitle}
             >
               <Download className="h-4 w-4" aria-hidden />
-              <span className="hidden sm:inline">CSVを保存</span>
+              <span className="hidden md:inline">CSVを保存</span>
             </a>
             <form action={logoutAction}>
               <button
@@ -103,37 +128,18 @@ export default function Header() {
                 title="ログアウトしてログイン画面に戻ります"
               >
                 <LogOut className="h-4 w-4" aria-hidden />
-                <span className="hidden sm:inline">ログアウト</span>
+                <span className="hidden md:inline">ログアウト</span>
               </button>
             </form>
           </div>
         </div>
+      </div>
 
-        <div className="mt-3">
+      {/* 2行目: サマリー(見積 or 案件の集計)を1行のストリップで表示 */}
+      <div className="border-t border-slate-100 bg-slate-50/70">
+        <div className="mx-auto max-w-5xl px-4 py-1.5">
           <section.SummaryBar />
         </div>
-
-        <nav className="mt-2 flex gap-1" aria-label="画面の切り替え">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const active =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium sm:flex-none sm:px-5 ${
-                  active
-                    ? "border-blue-600 font-semibold text-blue-700"
-                    : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                }`}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon className="h-4 w-4" aria-hidden />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
     </HeaderShell>
   );

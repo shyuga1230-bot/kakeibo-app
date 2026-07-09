@@ -65,14 +65,11 @@ export default function HeaderSummaryBar<T>({
     : loadingLabels.map((label) => ({ label, value: "…" }));
 
   return (
-    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
+    <div className="flex flex-wrap items-baseline gap-x-5 gap-y-0.5 sm:gap-x-8">
       {items.map(({ label, value }) => (
-        <div
-          key={label}
-          className="flex flex-col items-center rounded-lg bg-slate-50 px-2 py-1.5 ring-1 ring-inset ring-slate-200"
-        >
-          <span className="text-[11px] leading-tight text-slate-500">{label}</span>
-          <span className="tabular-nums text-sm font-bold leading-tight text-slate-900 sm:text-base">
+        <div key={label} className="flex items-baseline gap-1.5">
+          <span className="text-[11px] text-slate-500">{label}</span>
+          <span className="tabular-nums text-sm font-bold text-slate-900">
             {value}
           </span>
         </div>
