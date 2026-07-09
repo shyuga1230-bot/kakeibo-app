@@ -2,7 +2,7 @@
 // 見積もり登録のときにボタン一発で項目に追加できる。
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { listMasterItems } from "@/lib/items";
+import { listMasterItemsWithSales } from "@/lib/items";
 import ItemMasterManager from "@/components/ItemMasterManager";
 
 export const metadata = { title: "商品管理 | Ark 見積・案件データベース" };
@@ -10,7 +10,7 @@ export const metadata = { title: "商品管理 | Ark 見積・案件データベ
 export default async function ItemsPage() {
   if (!(await getSession())) redirect("/login");
 
-  const items = await listMasterItems();
+  const items = await listMasterItemsWithSales();
 
   return (
     <div className="space-y-4">
@@ -19,7 +19,7 @@ export default async function ItemsPage() {
         <p className="mt-1 text-sm text-slate-600">
           よく売る商品・サービスをここに登録しておくと、見積もりの登録画面で
           <b>ボタンを押すだけ</b>で項目に追加できるようになります。
-          標準金額を設定すると、金額も自動で入ります(登録のつど変更できます)。
+          色つきのラベルは、その商品がどれくらい売れているか(登録件数の度合い)を表します。
         </p>
         <div className="mt-4">
           <ItemMasterManager items={items} />

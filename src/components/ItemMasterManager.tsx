@@ -12,7 +12,8 @@ import {
   type ActionResult,
 } from "@/app/actions";
 import { formatYen } from "@/lib/format";
-import type { MasterItem } from "@/lib/items";
+import { SALES_LEVELS, salesLevel } from "@/lib/item-level";
+import type { MasterItemWithSales } from "@/lib/items";
 
 function Message({ result }: { result: ActionResult | null }) {
   if (!result) return null;
@@ -28,7 +29,7 @@ function Message({ result }: { result: ActionResult | null }) {
 }
 
 /** 1商品分の行(表示・編集・削除) */
-function ItemRow({ item }: { item: MasterItem }) {
+function ItemRow({ item, maxCount }: { item: MasterItemWithSales; maxCount: number }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleteResult, setDeleteResult] = useState<ActionResult | null>(null);
@@ -113,9 +114,10 @@ function ItemRow({ item }: { item: MasterItem }) {
     );
   }
 
+  const level = salesLevel(item.salesCount, maxCount);
   return (
     <li className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <span className="break-all text-sm font-medium">{item.name}</span>
         <span className="ml-2 text-xs tabular-nums text-slate-500">
           {item.defaultAmount != null ? `標準 ¥${formatYen(item.defaultAmount)}` : ""}
@@ -126,6 +128,12 @@ function ItemRow({ item }: { item: MasterItem }) {
           </p>
         )}
       </div>
+      <span
+        className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums ${level.chipClass}`}
+        title={`これまでに${item.salesCount}件の見積もりに登録されました`}
+      >
+        {level.key === "none" ? level.label : `${level.label} ${item.salesCount}件`}
+      </span>
       <div className="flex shrink-0 items-center gap-1">
         <button
           type="button"
@@ -149,7 +157,7 @@ function ItemRow({ item }: { item: MasterItem }) {
   );
 }
 
-export default function ItemMasterManager({ items }: { items: MasterItem[] }) {
+export default function ItemMasterManager({ items }: { items: MasterItemWithSales[] }) {
   const router = useRouter();
   const [createState, createAction, creating] = useActionState<
     ActionResult | null,
@@ -168,6 +176,7 @@ export default function ItemMasterManager({ items }: { items: MasterItem[] }) {
 
   const [importResult, setImportResult] = useState<ActionResult | null>(null);
   const [importing, startImport] = useTransition();
+  const maxCount = items.reduce((max, i) => Math.max(max, i.salesCount), 0);
 
   return (
     <div className="space-y-4">
@@ -213,11 +222,25 @@ export default function ItemMasterManager({ items }: { items: MasterItem[] }) {
           </p>
         </div>
       ) : (
-        <ul className="space-y-2">
-          {items.map((item) => (
-            <ItemRow key={item.id} item={item} />
-          ))}
-        </ul>
+        <>
+          {/* 色の意味(売れている度合い)の凡例 */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+            <span>売れている度合い(登録件数):</span>
+            {SALES_LEVELS.map((l) => (
+              <span
+                key={l.key}
+                className={`rounded-full px-2 py-0.5 font-medium ${l.chipClass}`}
+              >
+                {l.label}
+              </span>
+            ))}
+          </div>
+          <ul className="space-y-2">
+            {items.map((item) => (
+              <ItemRow key={item.id} item={item} maxCount={maxCount} />
+            ))}
+          </ul>
+        </>
       )}
 
       <div className="space-y-2 border-t border-slate-100 pt-3">
