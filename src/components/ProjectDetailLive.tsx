@@ -79,7 +79,7 @@ export default function ProjectDetailLive({
         </p>
       </div>
 
-      <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
         <h2 className="text-lg font-bold">基本情報</h2>
         <p className="mt-1 text-sm text-slate-600">
           社名は顧客(施工会社)、協力会社はArkが業務を依頼する外注先です。
@@ -98,7 +98,7 @@ export default function ProjectDetailLive({
         </div>
       </section>
 
-      <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
         <h2 className="text-lg font-bold">工程の進捗</h2>
         <p className="mt-1 text-sm text-slate-600">
           「進行中」「完了」を選ぶと日付が自動で入ります(変更もできます)。
@@ -108,7 +108,7 @@ export default function ProjectDetailLive({
         </div>
       </section>
 
-      <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
         <h2 className="text-lg font-bold">更新履歴</h2>
         <p className="mt-1 text-sm text-slate-600">
           この案件に対する変更の記録です(新しい順・最新30件)。

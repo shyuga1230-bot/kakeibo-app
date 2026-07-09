@@ -18,12 +18,14 @@ export default function ArkLogo({ size = 32 }: Props) {
     >
       <defs>
         <linearGradient id="ark-tile" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#1e3a8a" />
-          <stop offset="100%" stopColor="#0f172a" />
+          <stop offset="0%" stopColor="#1e40af" />
+          <stop offset="55%" stopColor="#172554" />
+          <stop offset="100%" stopColor="#020617" />
         </linearGradient>
         <linearGradient id="ark-a" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#fcd34d" />
-          <stop offset="100%" stopColor="#f59e0b" />
+          <stop offset="0%" stopColor="#fde68a" />
+          <stop offset="45%" stopColor="#fbbf24" />
+          <stop offset="100%" stopColor="#ea580c" />
         </linearGradient>
       </defs>
       <rect width="32" height="32" rx="8" fill="url(#ark-tile)" />

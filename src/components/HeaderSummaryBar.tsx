@@ -69,7 +69,7 @@ export default function HeaderSummaryBar<T>({
       {items.map(({ label, value }) => (
         <div
           key={label}
-          className="flex flex-col items-center rounded-lg bg-white/[0.07] px-2 py-1.5 ring-1 ring-inset ring-white/10"
+          className="flex flex-col items-center rounded-lg bg-gradient-to-b from-white/[0.14] to-white/[0.03] px-2 py-1.5 ring-1 ring-inset ring-white/10"
         >
           <span className="text-[11px] leading-tight tracking-wide text-slate-400">
             {label}

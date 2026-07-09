@@ -287,7 +287,7 @@ export default function QuoteForm({ masterItems, edit, prefill }: Props) {
       <button
         type="submit"
         disabled={pending || duplicateNames.length > 0}
-        className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-700 px-4 py-3 text-base font-medium text-white hover:bg-blue-800 disabled:opacity-50 sm:w-auto sm:px-8"
+        className="flex w-full items-center justify-center gap-2 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-3 text-base font-medium text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 sm:w-auto sm:px-8"
       >
         <Save className="h-5 w-5" aria-hidden />
         {pending

@@ -52,14 +52,14 @@ export default async function AnalysisPage({
 
   if (data.totalQuotes === 0) {
     return (
-      <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+      <div className="rounded-xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-900/5">
         <p className="text-slate-600">まだ見積もりが登録されていません。</p>
         <p className="mt-1 text-sm text-slate-500">
           データがたまると、ここで「一緒に売れやすい組み合わせ」を確認できます。
         </p>
         <Link
           href="/"
-          className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800"
         >
           <PenLine className="h-4 w-4" aria-hidden />
           登録画面で最初の1件を登録する
@@ -80,7 +80,7 @@ export default async function AnalysisPage({
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <section className="rounded-xl bg-white p-4 shadow-sm lg:col-span-1">
+        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 lg:col-span-1">
           <h2 className="text-base font-bold">1. 基準となる項目を選ぶ</h2>
           <p className="mt-1 text-xs text-slate-500">
             「この項目が売れた案件では、他に何が売れているか?」の
@@ -97,7 +97,7 @@ export default async function AnalysisPage({
           </div>
         </section>
 
-        <section className="rounded-xl bg-white p-4 shadow-sm lg:col-span-2">
+        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 lg:col-span-2">
           <h2 className="text-base font-bold">2. 一緒に売れている項目</h2>
           {!co ? (
             <p className="mt-6 text-center text-sm text-slate-500">
@@ -145,7 +145,7 @@ export default async function AnalysisPage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl bg-white p-4 shadow-sm">
+        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
           <h2 className="text-base font-bold">定番の組み合わせ TOP10</h2>
           <p className="mt-1 text-xs text-slate-500">
             2回以上一緒に登場したペアを、回数の多い順に表示しています。
@@ -182,7 +182,7 @@ export default async function AnalysisPage({
           )}
         </section>
 
-        <section className="rounded-xl bg-white p-4 shadow-sm">
+        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
           <h2 className="text-base font-bold">売れ筋ランキング TOP10</h2>
           <p className="mt-1 text-xs text-slate-500">
             登場した案件数の多い順(同数の場合は金額合計の多い順)。

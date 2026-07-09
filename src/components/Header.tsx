@@ -43,6 +43,32 @@ const DEFAULT_SECTION = {
   SummaryBar: SummaryBar,
 } as const;
 
+/**
+ * ヘッダーの共通の器。上端にアンバーのブランドライン、
+ * 背景は奥行きのある多層グラデーション(ネイビー+左上にアンバー、右上にブルーの光)。
+ */
+function HeaderShell({ children }: { children: React.ReactNode }) {
+  return (
+    <header className="relative isolate overflow-hidden bg-slate-950 text-white shadow-lg shadow-slate-950/20">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(90rem 36rem at 112% -30%, rgba(59,130,246,0.28), transparent 60%)," +
+            "radial-gradient(42rem 20rem at -6% -45%, rgba(245,158,11,0.20), transparent 60%)," +
+            "linear-gradient(115deg, #020617 0%, #0f1f42 48%, #0a1530 100%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="h-[3px] w-full bg-gradient-to-r from-amber-600 via-amber-400 to-orange-500"
+      />
+      {children}
+    </header>
+  );
+}
+
 /** Arkのロゴとアプリ名(ヘッダー用) */
 function Brand() {
   return (
@@ -67,16 +93,16 @@ export default function Header() {
 
   if (pathname === "/login") {
     return (
-      <header className="border-b border-amber-500/60 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white">
+      <HeaderShell>
         <div className="mx-auto flex max-w-5xl items-center px-4 py-3">
           <Brand />
         </div>
-      </header>
+      </HeaderShell>
     );
   }
 
   return (
-    <header className="border-b border-amber-500/60 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white shadow-lg shadow-slate-900/10">
+    <HeaderShell>
       <div className="mx-auto max-w-5xl px-4 pb-2 pt-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Brand />
@@ -131,6 +157,6 @@ export default function Header() {
           })}
         </nav>
       </div>
-    </header>
+    </HeaderShell>
   );
 }

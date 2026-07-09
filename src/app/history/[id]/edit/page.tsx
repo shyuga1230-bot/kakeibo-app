@@ -35,7 +35,7 @@ export default async function EditQuotePage({
         <ArrowLeft className="h-4 w-4" aria-hidden />
         履歴に戻る(保存しない)
       </Link>
-      <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
         <h2 className="text-lg font-bold">見積もりを編集する</h2>
         <p className="mt-1 text-sm text-slate-600">
           変更内容は「変更を保存する」を押した時点で全員のデータに反映されます。

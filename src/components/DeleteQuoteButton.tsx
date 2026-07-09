@@ -51,7 +51,7 @@ export default function DeleteQuoteButton({ quoteId, description }: Props) {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby={`delete-dialog-title-${quoteId}`}
@@ -105,7 +105,7 @@ export default function DeleteQuoteButton({ quoteId, description }: Props) {
                 type="button"
                 onClick={confirmDelete}
                 disabled={pending}
-                className="flex items-center gap-1.5 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-md bg-gradient-to-b from-red-500 to-red-600 shadow-sm shadow-red-900/20 px-4 py-2 text-sm font-medium text-white hover:from-red-600 hover:to-red-700 disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" aria-hidden />
                 {pending ? "削除中…" : "削除する"}
