@@ -103,7 +103,7 @@ function AssignRow({
           type="button"
           onClick={submit}
           disabled={pending || choice === current}
-          className="rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-3 py-1.5 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
+          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {pending ? "保存中…" : current === "" ? "割り当てる" : "変更"}
         </button>
@@ -162,7 +162,7 @@ function PartnerRow({ partner, activeCount }: { partner: Partner; activeCount: n
           <button
             type="submit"
             disabled={pending}
-            className="flex items-center gap-1 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-3 py-1.5 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             <Save className="h-3.5 w-3.5" aria-hidden />
             {pending ? "保存中…" : "保存"}
@@ -269,7 +269,7 @@ function PartnerManager({
         <button
           type="submit"
           disabled={pending}
-          className="flex items-center gap-1 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-3 py-1.5 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
+          className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           <CirclePlus className="h-4 w-4" aria-hidden />
           {pending ? "登録中…" : "追加"}
@@ -379,7 +379,7 @@ export default function AssignView({
                   </span>
                   <div className="h-4 flex-1 rounded bg-slate-50">
                     <div
-                      className="h-full rounded bg-gradient-to-r from-blue-500 to-indigo-600"
+                      className="h-full rounded bg-blue-500"
                       style={{ width: `${(count / maxCount) * 100}%` }}
                       role="img"
                       aria-label={`${p.name}の担当 ${count}件`}

@@ -87,7 +87,7 @@ function ItemRow({ item }: { item: MasterItem }) {
           <button
             type="submit"
             disabled={pending}
-            className="flex items-center gap-1 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-3 py-1.5 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             <Save className="h-3.5 w-3.5" aria-hidden />
             {pending ? "保存中…" : "保存"}
@@ -195,7 +195,7 @@ export default function ItemMasterManager({ items }: { items: MasterItem[] }) {
         <button
           type="submit"
           disabled={creating}
-          className="flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           <CirclePlus className="h-4 w-4" aria-hidden />
           {creating ? "登録中…" : "商品を登録する"}

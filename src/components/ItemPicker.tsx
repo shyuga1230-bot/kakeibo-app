@@ -47,7 +47,7 @@ export default function ItemPicker({ items, selected }: Props) {
                 href={`/analysis?item=${encodeURIComponent(item.itemName)}`}
                 className={`flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-sm ${
                   active
-                    ? "bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 text-white"
+                    ? "bg-blue-600 text-white"
                     : "bg-slate-50 text-slate-700 hover:bg-blue-50"
                 }`}
                 aria-current={active ? "true" : undefined}

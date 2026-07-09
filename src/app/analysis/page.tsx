@@ -45,7 +45,7 @@ export default async function SalesPage({
           </p>
           <Link
             href="/"
-            className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-blue-900/20 hover:from-blue-700 hover:to-blue-800"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             <PenLine className="h-4 w-4" aria-hidden />
             登録画面で最初の1件を登録する
@@ -131,7 +131,7 @@ export default async function SalesPage({
                     {mo.total > 0 ? formatYenCompact(mo.total) : " "}
                   </span>
                   <div
-                    className="w-full max-w-10 rounded-t bg-gradient-to-t from-blue-700 to-blue-500"
+                    className="w-full max-w-10 rounded-t bg-blue-500"
                     style={{ height: `${heightPercent}%` }}
                     role="img"
                     aria-label={`${mo.month}月の売上高 ${
@@ -168,7 +168,7 @@ export default async function SalesPage({
             const top = mo.items.slice(0, RANKING_SIZE);
             const monthMax = Math.max(1, ...top.map((i) => i.amount));
             return (
-              <div key={mo.month} className="rounded-lg border border-slate-200 p-3">
+              <div key={mo.month} className="rounded-lg bg-slate-50 p-3">
                 <p className="flex items-baseline justify-between">
                   <span className="font-bold">{mo.month}月</span>
                   <span className="text-xs tabular-nums text-slate-500">
@@ -185,7 +185,7 @@ export default async function SalesPage({
                           <span className="flex min-w-0 items-baseline gap-1.5">
                             <span
                               className={`w-4 shrink-0 text-center font-bold tabular-nums ${
-                                i === 0 ? "text-amber-600" : "text-slate-400"
+                                i === 0 ? "text-blue-700" : "text-slate-400"
                               }`}
                             >
                               {i + 1}
@@ -202,9 +202,9 @@ export default async function SalesPage({
                             {item.amount > 0 ? `¥${formatYen(item.amount)}` : "金額未入力"}
                           </span>
                         </p>
-                        <div className="ml-5.5 mt-0.5 h-1.5 rounded bg-slate-100">
+                        <div className="ml-5.5 mt-0.5 h-1.5 rounded bg-slate-200/70">
                           <div
-                            className="h-full rounded bg-gradient-to-r from-blue-500 to-indigo-600"
+                            className="h-full rounded bg-blue-500"
                             style={{ width: `${Math.round((item.amount / monthMax) * 100)}%` }}
                           />
                         </div>

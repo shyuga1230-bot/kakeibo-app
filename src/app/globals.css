@@ -5,17 +5,11 @@
 }
 
 body {
-  @apply bg-slate-100 text-slate-800 antialiased;
-  /* ネイビーとアンバーをほんのり感じる背景(Arkのブランドカラー) */
-  background-image:
-    radial-gradient(70rem 30rem at 8% -6rem, rgba(37, 99, 235, 0.07), transparent 60%),
-    radial-gradient(60rem 26rem at 104% 112%, rgba(245, 158, 11, 0.06), transparent 60%),
-    linear-gradient(180deg, #f8fafc 0%, #edf1f7 100%);
-  background-attachment: fixed;
+  @apply bg-slate-50 text-slate-800 antialiased;
 }
 
 ::selection {
-  background-color: rgba(245, 158, 11, 0.3);
+  background-color: rgba(59, 130, 246, 0.25);
 }
 
 /* 数字の桁が揃うようにする(サマリーや金額表示用) */

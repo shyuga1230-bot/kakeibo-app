@@ -43,29 +43,10 @@ const DEFAULT_SECTION = {
   SummaryBar: SummaryBar,
 } as const;
 
-/**
- * ヘッダーの共通の器。上端にアンバーのブランドライン、
- * 背景は奥行きのある多層グラデーション(ネイビー+左上にアンバー、右上にブルーの光)。
- */
+/** ヘッダーの共通の器(白基調・下線のみのすっきりした見た目) */
 function HeaderShell({ children }: { children: React.ReactNode }) {
   return (
-    <header className="relative isolate overflow-hidden bg-slate-950 text-white shadow-lg shadow-slate-950/20">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(90rem 36rem at 112% -30%, rgba(59,130,246,0.28), transparent 60%)," +
-            "radial-gradient(42rem 20rem at -6% -45%, rgba(245,158,11,0.20), transparent 60%)," +
-            "linear-gradient(115deg, #020617 0%, #0f1f42 48%, #0a1530 100%)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="h-[3px] w-full bg-gradient-to-r from-amber-600 via-amber-400 to-orange-500"
-      />
-      {children}
-    </header>
+    <header className="border-b border-slate-200 bg-white">{children}</header>
   );
 }
 
@@ -75,10 +56,10 @@ function Brand() {
     <div className="flex min-w-0 items-center gap-2.5">
       <ArkLogo size={34} />
       <h1 className="min-w-0 leading-tight">
-        <span className="block bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-lg font-extrabold tracking-wide text-transparent sm:text-xl">
+        <span className="block text-lg font-extrabold tracking-wide text-blue-700 sm:text-xl">
           Ark
         </span>
-        <span className="block truncate text-[11px] font-medium tracking-wider text-slate-300 sm:text-xs">
+        <span className="block truncate text-[11px] font-medium tracking-wider text-slate-500 sm:text-xs">
           見積・案件データベース
         </span>
       </h1>
@@ -103,13 +84,13 @@ export default function Header() {
 
   return (
     <HeaderShell>
-      <div className="mx-auto max-w-5xl px-4 pb-2 pt-3">
+      <div className="mx-auto max-w-5xl px-4 pt-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Brand />
           <div className="flex items-center gap-1 text-xs">
             <a
               href={section.exportHref}
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               title={section.exportTitle}
             >
               <Download className="h-4 w-4" aria-hidden />
@@ -118,7 +99,7 @@ export default function Header() {
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
+                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                 title="ログアウトしてログイン画面に戻ります"
               >
                 <LogOut className="h-4 w-4" aria-hidden />
@@ -132,7 +113,7 @@ export default function Header() {
           <section.SummaryBar />
         </div>
 
-        <nav className="mt-3 flex gap-1" aria-label="画面の切り替え">
+        <nav className="mt-2 flex gap-1" aria-label="画面の切り替え">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active =
               href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -140,17 +121,14 @@ export default function Header() {
               <Link
                 key={href}
                 href={href}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-t-lg border-t-2 px-3 py-2 text-sm font-medium sm:flex-none sm:px-5 ${
+                className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium sm:flex-none sm:px-5 ${
                   active
-                    ? "border-amber-400 bg-slate-100 font-semibold text-slate-900"
-                    : "border-transparent text-slate-300 hover:bg-white/10 hover:text-white"
+                    ? "border-blue-600 font-semibold text-blue-700"
+                    : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon
-                  className={`h-4 w-4 ${active ? "text-amber-600" : ""}`}
-                  aria-hidden
-                />
+                <Icon className="h-4 w-4" aria-hidden />
                 {label}
               </Link>
             );

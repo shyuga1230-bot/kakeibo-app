@@ -119,7 +119,7 @@ export default async function ProjectsDashboardPage() {
           </p>
           <Link
             href="/projects"
-            className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             <ListChecks className="h-4 w-4" aria-hidden />
             一覧表で最初の案件を登録する
@@ -187,7 +187,7 @@ export default async function ProjectsDashboardPage() {
               </span>
               <div className="h-4 flex-1 rounded bg-slate-50">
                 <div
-                  className="h-full rounded bg-gradient-to-r from-blue-500 to-indigo-600"
+                  className="h-full rounded bg-blue-500"
                   style={{ width: `${(count / maxBottleneck) * 100}%` }}
                   role="img"
                   aria-label={`${stage.label}で止まっている案件 ${count}件`}
