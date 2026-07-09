@@ -8,10 +8,12 @@ import { createProjectAction } from "@/app/projects/actions";
 import type { ActionResult } from "@/app/actions";
 import { notifyProjectDataChanged } from "@/lib/events";
 import { useActionSuccess } from "@/lib/hooks";
+import type { Partner } from "@/lib/partners";
 import Dialog from "@/components/Dialog";
 import ActionMessage from "@/components/ActionMessage";
+import PartnerPicker from "@/components/PartnerPicker";
 
-export default function NewProjectButton() {
+export default function NewProjectButton({ partners }: { partners: Partner[] }) {
   const [open, setOpen] = useState(false);
 
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
@@ -70,12 +72,7 @@ export default function NewProjectButton() {
             </label>
             <label className="block text-sm font-medium text-slate-700">
               協力会社(外注先・任意)
-              <input
-                type="text"
-                name="partner_name"
-                placeholder="例: ○○測量"
-                className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-              />
+              <PartnerPicker name="partner_name" defaultValue={null} partners={partners} />
             </label>
             <label className="block text-sm font-medium text-slate-700">
               備考(任意)

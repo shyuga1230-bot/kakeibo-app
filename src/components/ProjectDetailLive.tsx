@@ -10,6 +10,7 @@ import { PROJECT_DATA_CHANGED_EVENT } from "@/lib/events";
 import { useAutoReload } from "@/lib/hooks";
 import { formatDateTimeJst } from "@/lib/format";
 import type { BoardProject } from "@/lib/project-board";
+import type { Partner } from "@/lib/partners";
 import { PROJECT_PHASE_LABELS, type ProjectPhase } from "@/lib/project-stages";
 import ProjectEditForm from "@/components/ProjectEditForm";
 import ProjectStageEditor from "@/components/ProjectStageEditor";
@@ -27,9 +28,11 @@ type Live = {
 
 export default function ProjectDetailLive({
   project,
+  partners,
   initialLogs,
 }: {
   project: BoardProject;
+  partners: Partner[];
   initialLogs: ProjectLogItem[];
 }) {
   const [live, setLive] = useState<Live>({
@@ -90,6 +93,7 @@ export default function ProjectDetailLive({
               projectName: project.projectName,
               memo: project.memo,
             }}
+            partners={partners}
           />
         </div>
       </section>

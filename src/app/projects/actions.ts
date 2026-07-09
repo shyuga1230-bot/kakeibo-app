@@ -16,6 +16,7 @@ import {
   type StageState,
 } from "@/lib/project-stages";
 import {
+  assignPartner,
   createProject,
   deleteProject,
   getProject,
@@ -26,6 +27,13 @@ import {
   type ProjectInput,
   type StageInput,
 } from "@/lib/projects";
+import {
+  createPartner,
+  deletePartner,
+  ensurePartner,
+  importPartnersFromProjects,
+  updatePartner,
+} from "@/lib/partners";
 import type { ActionResult } from "@/app/actions";
 
 const NOT_LOGGED_IN: ActionResult = {
@@ -79,6 +87,16 @@ function validateProjectForm(
   };
 }
 
+/** 新しい協力会社名が入力されたらマスタへ自動追加(失敗しても登録自体は成功扱い) */
+async function addPartnerToMaster(partnerName: string | null): Promise<void> {
+  if (!partnerName) return;
+  try {
+    await ensurePartner(partnerName);
+  } catch (e) {
+    console.error("ensurePartner failed:", e);
+  }
+}
+
 export async function createProjectAction(
   _prev: ActionResult | null,
   formData: FormData,
@@ -90,6 +108,7 @@ export async function createProjectAction(
 
   try {
     await createProject(validated.input);
+    await addPartnerToMaster(validated.input.partnerName);
   } catch (e) {
     console.error("createProjectAction failed:", e);
     return { ok: false, error: SAVE_FAILED };
@@ -116,6 +135,7 @@ export async function updateProjectAction(
   try {
     if (!(await projectExists(projectId))) return ALREADY_DELETED;
     await updateProject(projectId, validated.input);
+    await addPartnerToMaster(validated.input.partnerName);
   } catch (e) {
     console.error("updateProjectAction failed:", e);
     return { ok: false, error: SAVE_FAILED };
@@ -139,6 +159,132 @@ export async function deleteProjectAction(projectId: number): Promise<ActionResu
     };
   }
   return { ok: true, message: "案件を削除しました。" };
+}
+
+// ---------------------------------------------------------------------------
+// 協力会社への振分けとマスタの管理
+// ---------------------------------------------------------------------------
+
+/** 振分け画面から呼ばれる: 案件の協力会社を変更する(nullで割り当て解除) */
+export async function assignPartnerAction(
+  projectId: number,
+  partnerName: string | null,
+): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    return { ok: false, error: "対象の案件が見つかりません。" };
+  }
+  const name = partnerName === null ? null : String(partnerName).trim();
+  if (name !== null && (name === "" || name.length > 100)) {
+    return { ok: false, error: "協力会社名が正しくありません(100文字まで)。" };
+  }
+  try {
+    if (!(await projectExists(projectId))) return ALREADY_DELETED;
+    await assignPartner(projectId, name);
+    await addPartnerToMaster(name);
+  } catch (e) {
+    console.error("assignPartnerAction failed:", e);
+    return { ok: false, error: SAVE_FAILED };
+  }
+  return {
+    ok: true,
+    message: name ? `「${name}」に割り当てました。` : "割り当てを外しました。",
+  };
+}
+
+/** 協力会社名の入力チェック(登録・変更で共通) */
+function validatePartnerName(
+  formData: FormData,
+): { ok: true; name: string } | { ok: false; error: string } {
+  const name = String(formData.get("name") ?? "").trim();
+  if (name === "") return { ok: false, error: "会社名を入力してください。" };
+  if (name.length > 100) {
+    return { ok: false, error: "会社名が長すぎます(100文字まで)。" };
+  }
+  return { ok: true, name };
+}
+
+function isUniqueError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && (e as { code?: string }).code === "P2002";
+}
+
+export async function createPartnerAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  const validated = validatePartnerName(formData);
+  if (!validated.ok) return validated;
+  try {
+    await createPartner(validated.name);
+  } catch (e) {
+    if (isUniqueError(e)) {
+      return { ok: false, error: `「${validated.name}」はすでに登録されています。` };
+    }
+    console.error("createPartnerAction failed:", e);
+    return { ok: false, error: "保存に失敗しました。もう一度お試しください。" };
+  }
+  return { ok: true, message: `「${validated.name}」を協力会社に登録しました。` };
+}
+
+export async function updatePartnerAction(
+  partnerId: number,
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  if (!Number.isInteger(partnerId) || partnerId <= 0) {
+    return { ok: false, error: "編集対象の会社が見つかりません。" };
+  }
+  const validated = validatePartnerName(formData);
+  if (!validated.ok) return validated;
+  try {
+    await updatePartner(partnerId, validated.name);
+  } catch (e) {
+    if (isUniqueError(e)) {
+      return { ok: false, error: `「${validated.name}」はすでに登録されています。` };
+    }
+    console.error("updatePartnerAction failed:", e);
+    return {
+      ok: false,
+      error: "保存に失敗しました。この会社はすでに削除されている可能性があります。",
+    };
+  }
+  return { ok: true, message: "変更を保存しました。" };
+}
+
+export async function deletePartnerAction(partnerId: number): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  if (!Number.isInteger(partnerId) || partnerId <= 0) {
+    return { ok: false, error: "削除対象の会社が見つかりません。" };
+  }
+  try {
+    await deletePartner(partnerId);
+  } catch (e) {
+    console.error("deletePartnerAction failed:", e);
+    return {
+      ok: false,
+      error: "削除に失敗しました。この会社はすでに削除されている可能性があります。",
+    };
+  }
+  return { ok: true, message: "協力会社を削除しました。" };
+}
+
+export async function importPartnersAction(): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  try {
+    const count = await importPartnersFromProjects();
+    return {
+      ok: true,
+      message:
+        count === 0
+          ? "取り込める会社名はありませんでした(すべて登録済みです)。"
+          : `案件から ${count} 社を取り込みました。`,
+    };
+  } catch (e) {
+    console.error("importPartnersAction failed:", e);
+    return { ok: false, error: "取り込みに失敗しました。もう一度お試しください。" };
+  }
 }
 
 // ---------------------------------------------------------------------------

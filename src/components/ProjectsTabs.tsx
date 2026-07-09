@@ -1,9 +1,10 @@
-// 案件管理の中の「一覧表」と「ダッシュボード」の切り替えタブ。
+// 案件管理の中の「一覧表」「振分け」「ダッシュボード」の切り替えタブ。
 import Link from "next/link";
-import { LayoutDashboard, ListChecks } from "lucide-react";
+import { LayoutDashboard, ListChecks, Scale } from "lucide-react";
 
 const TABS = [
   { key: "board", href: "/projects", label: "一覧表", icon: ListChecks },
+  { key: "assign", href: "/projects/assign", label: "振分け", icon: Scale },
   { key: "dashboard", href: "/projects/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
 ] as const;
 
