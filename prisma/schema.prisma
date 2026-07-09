@@ -1,5 +1,6 @@
 // データベースの設計図(Prisma スキーマ)
-// 表は2つ: quotes(見積もり) と quote_items(明細)
+// 見積もり関連: quotes(見積もり) / quote_items(明細) / items(商品マスタ)
+// 案件管理関連: projects(案件) / project_stages(工程の進捗) / project_logs(更新履歴)
 
 generator client {
   provider = "prisma-client"
@@ -38,6 +39,61 @@ model Item {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("items")
+}
+
+// 案件(工事)1件。行=案件、列=工程 の管理表の「行」にあたる。
+model Project {
+  id          Int            @id @default(autoincrement())
+  // 社名(顧客=施工会社)。あとから入れられるよう任意
+  clientName  String?        @map("client_name")
+  // 協力会社(Arkが業務を依頼する外注先)。任意
+  partnerName String?        @map("partner_name")
+  // 案件名(工事名)。必須
+  projectName String         @map("project_name")
+  // 備考(Excelの備考行に相当)
+  memo        String?
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  stages      ProjectStage[]
+  logs        ProjectLog[]
+
+  @@index([clientName])
+  @@index([updatedAt])
+  @@map("projects")
+}
+
+// 案件×工程の進捗1マス。工程の種類(stageKey)はプログラム側で固定の13種
+// (src/lib/project-stages.ts)。行が無い工程は「未着手」として扱うため、
+// 最初に状態を変えたときに初めて行が作られる。
+model ProjectStage {
+  id        Int      @id @default(autoincrement())
+  projectId Int      @map("project_id")
+  stageKey  String   @map("stage_key")
+  // 状態: not_started(未着手) / in_progress(進行中) / done(完了) / not_applicable(対象外)
+  status    String   @default("not_started")
+  // 実施日・完了日は "YYYY-MM-DD" 形式の文字列(見積もりの日付と同じ方針)
+  date      String?
+  // 工程ごとのメモ(任意)
+  memo      String?
+  updatedAt DateTime @updatedAt @map("updated_at")
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 同じ案件に同じ工程は1行だけ
+  @@unique([projectId, stageKey])
+  @@map("project_stages")
+}
+
+// 案件の更新履歴(誰かが変更した内容を新しい順に表示するための記録)
+model ProjectLog {
+  id        Int      @id @default(autoincrement())
+  projectId Int      @map("project_id")
+  // 変更内容の説明(例: 「起工測量」を「完了」に変更)
+  action    String
+  createdAt DateTime @default(now()) @map("created_at")
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@map("project_logs")
 }
 
 // 見積もりの明細(売れた項目)1行
