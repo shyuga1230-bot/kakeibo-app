@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { listProjects } from "@/lib/projects";
+import { listPartners } from "@/lib/partners";
 import { toBoardProject } from "@/lib/project-board";
 import ProjectBoard from "@/components/ProjectBoard";
 import NewProjectButton from "@/components/NewProjectButton";
@@ -13,13 +14,13 @@ export const metadata = { title: "案件管理 | 見積もり併売データベ�
 export default async function ProjectsPage() {
   if (!(await getSession())) redirect("/login");
 
-  const projects = await listProjects();
+  const [projects, partners] = await Promise.all([listProjects(), listPartners()]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <ProjectsTabs active="board" />
-        <NewProjectButton />
+        <NewProjectButton partners={partners} />
       </div>
       <ProjectBoard initialProjects={projects.map(toBoardProject)} />
     </div>

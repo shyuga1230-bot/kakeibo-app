@@ -156,6 +156,23 @@ export async function deleteProject(id: number): Promise<void> {
   await getPrisma().project.delete({ where: { id } });
 }
 
+/** 振分け画面用: 協力会社だけを変更する(履歴に残す) */
+export async function assignPartner(id: number, partnerName: string | null): Promise<void> {
+  await getPrisma().project.update({
+    where: { id },
+    data: {
+      partnerName,
+      logs: {
+        create: {
+          action: partnerName
+            ? `協力会社を「${partnerName}」にしました`
+            : "協力会社の割り当てを外しました",
+        },
+      },
+    },
+  });
+}
+
 /** 更新履歴に残す文言(セルからの変更と、まとめて保存で共通) */
 function stageChangeMessage(label: string, input: StageInput): string {
   const statusLabel = statusDef(input.status).label;

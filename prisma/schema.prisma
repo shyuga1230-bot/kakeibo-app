@@ -82,6 +82,18 @@ model ProjectStage {
   @@map("project_stages")
 }
 
+// 協力会社マスタ(振分け先の候補)。
+// 案件の協力会社は名前の文字列で保存するため、
+// ここの名前を変えたり消したりしても過去の案件データは変わらない。
+model Partner {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("partners")
+}
+
 // 案件の更新履歴(誰かが変更した内容を新しい順に表示するための記録)
 model ProjectLog {
   id        Int      @id @default(autoincrement())

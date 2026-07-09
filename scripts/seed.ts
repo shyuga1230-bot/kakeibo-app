@@ -173,6 +173,16 @@ async function seedProjects(force: boolean): Promise<void> {
     );
     return;
   }
+  // 協力会社マスタ(振分け先の候補。担当ゼロの会社も1社入れておく)
+  await prisma.partner.createMany({
+    data: [
+      { name: "青空測量" },
+      { name: "ひかりドローンサービス" },
+      { name: "大地ICTサポート" },
+    ],
+    skipDuplicates: true,
+  });
+
   for (const seed of PROJECT_SEEDS) {
     await prisma.project.create({
       data: {

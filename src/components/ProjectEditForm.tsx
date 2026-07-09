@@ -7,7 +7,9 @@ import { updateProjectAction } from "@/app/projects/actions";
 import type { ActionResult } from "@/app/actions";
 import { notifyProjectDataChanged } from "@/lib/events";
 import { useActionSuccess } from "@/lib/hooks";
+import type { Partner } from "@/lib/partners";
 import ActionMessage from "@/components/ActionMessage";
+import PartnerPicker from "@/components/PartnerPicker";
 
 type Props = {
   project: {
@@ -17,9 +19,10 @@ type Props = {
     projectName: string;
     memo: string | null;
   };
+  partners: Partner[];
 };
 
-export default function ProjectEditForm({ project }: Props) {
+export default function ProjectEditForm({ project, partners }: Props) {
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     updateProjectAction.bind(null, project.id),
     null,
@@ -52,11 +55,10 @@ export default function ProjectEditForm({ project }: Props) {
         </label>
         <label className="block text-sm font-medium text-slate-700">
           協力会社(外注先)
-          <input
-            type="text"
+          <PartnerPicker
             name="partner_name"
-            defaultValue={project.partnerName ?? ""}
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            defaultValue={project.partnerName}
+            partners={partners}
           />
         </label>
         <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
