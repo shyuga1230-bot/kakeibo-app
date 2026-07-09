@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 import { ChevronLeft, ChevronRight, PenLine } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { loadQuotesForSales } from "@/lib/quotes";
-import { availableYears, computeYearlySales } from "@/lib/sales";
+import {
+  availableYears,
+  computeYearlyItemRanking,
+  computeYearlySales,
+} from "@/lib/sales";
 import { formatYen, formatYenCompact } from "@/lib/format";
 import AnalysisTabs from "@/components/AnalysisTabs";
 
@@ -65,6 +69,14 @@ export default async function SalesPage({
   const olderYear = years[yearIndex + 1]; // 1つ前(古い)年
   const newerYear = years[yearIndex - 1]; // 1つ後(新しい)年
 
+  // 年間の商品別ランキング(「何が売れているか」をパッと見せる)
+  const RANKING_TOP = 8;
+  const yearRanking = computeYearlyItemRanking(quotes, year);
+  const topItems = yearRanking.slice(0, RANKING_TOP);
+  const rankingMax = Math.max(1, ...topItems.map((i) => i.amount));
+  // 月ごとのランキングは、登録のある月だけを表示する
+  const monthsWithData = sales.filter((mo) => mo.items.length > 0);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -100,6 +112,65 @@ export default async function SalesPage({
           )}
         </div>
       </div>
+
+      {/* 年間の売れ筋ランキング(何が売れているかを最初に見せる) */}
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
+        <h2 className="text-lg font-bold">よく売れている商品 TOP{Math.min(RANKING_TOP, Math.max(topItems.length, 1))}</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          {year}年の商品別の売上高です。棒が長いほど売れています。
+        </p>
+        {topItems.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">{year}年の売上データはまだありません。</p>
+        ) : (
+          <ol className="mt-4 space-y-3">
+            {topItems.map((item, i) => (
+              <li key={item.itemName}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="flex min-w-0 items-baseline gap-2">
+                    <span
+                      className={`w-5 shrink-0 text-center font-bold tabular-nums ${
+                        i === 0 ? "text-lg text-blue-700" : "text-sm text-slate-400"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    <Link
+                      href={itemLink(item.itemName)}
+                      className={`truncate text-blue-700 hover:underline ${
+                        i === 0 ? "text-base font-bold" : "text-sm font-medium"
+                      }`}
+                      title={`「${item.itemName}」の併売分析を見る`}
+                    >
+                      {item.itemName}
+                    </Link>
+                    <span className="shrink-0 text-xs text-slate-400">{item.count}件</span>
+                  </span>
+                  <span
+                    className={`shrink-0 tabular-nums ${
+                      i === 0 ? "text-base font-bold text-slate-900" : "text-sm text-slate-600"
+                    }`}
+                  >
+                    {item.amount > 0 ? `¥${formatYen(item.amount)}` : "金額未入力"}
+                  </span>
+                </div>
+                <div className="ml-7 mt-1 h-4 rounded bg-slate-100">
+                  <div
+                    className={`h-full rounded ${i === 0 ? "bg-blue-600" : "bg-blue-400"}`}
+                    style={{
+                      width: `${Math.max(1, Math.round((item.amount / rankingMax) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+        {yearRanking.length > RANKING_TOP && (
+          <p className="mt-3 text-xs text-slate-400">
+            ほかに{yearRanking.length - RANKING_TOP}商品あります(月ごとの内訳は下の表で確認できます)。
+          </p>
+        )}
+      </section>
 
       {/* 月別の売上高グラフ */}
       <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
@@ -161,10 +232,16 @@ export default async function SalesPage({
       <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
         <h2 className="text-lg font-bold">月ごとの売れ筋ランキング</h2>
         <p className="mt-1 text-sm text-slate-600">
-          各月の売上高TOP{RANKING_SIZE}です。項目名を押すと、その項目の併売分析に移ります。
+          各月の売上高TOP{RANKING_SIZE}です(登録のある月だけ表示)。
+          項目名を押すと、その項目の併売分析に移ります。
         </p>
+        {monthsWithData.length === 0 && (
+          <p className="mt-4 text-sm text-slate-500">
+            {year}年に登録された見積もりはまだありません。
+          </p>
+        )}
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {sales.map((mo) => {
+          {monthsWithData.map((mo) => {
             const top = mo.items.slice(0, RANKING_SIZE);
             const monthMax = Math.max(1, ...top.map((i) => i.amount));
             return (

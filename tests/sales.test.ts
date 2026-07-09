@@ -1,7 +1,11 @@
 // 月別売上集計のテスト。実行方法: npm test
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { availableYears, computeYearlySales } from "../src/lib/sales";
+import {
+  availableYears,
+  computeYearlyItemRanking,
+  computeYearlySales,
+} from "../src/lib/sales";
 import { formatYenCompact } from "../src/lib/format";
 
 const QUOTES = [
@@ -47,6 +51,24 @@ test("computeYearlySales: 指定年の売上を月別に集計する(常に12ヶ
   assert.equal(sales[0].items.length, 0);
   // 2025年のデータは含まれない
   assert.ok(!sales.some((m) => m.items.some((i) => i.itemName === "ドローン空撮")));
+});
+
+test("computeYearlyItemRanking: 年間の商品別ランキング(売上高の多い順)", () => {
+  const ranking = computeYearlyItemRanking(QUOTES, 2026);
+  assert.deepEqual(
+    ranking.map((i) => [i.itemName, i.amount, i.count]),
+    [
+      ["ICT建機レンタル", 1200000, 1],
+      ["3D起工測量", 980000, 2], // 2回の合計
+      ["操作講習", 80000, 2], // 4月(金額未入力)+6月
+    ],
+  );
+  // 2025年は別集計
+  assert.deepEqual(
+    computeYearlyItemRanking(QUOTES, 2025).map((i) => i.itemName),
+    ["ドローン空撮"],
+  );
+  assert.deepEqual(computeYearlyItemRanking([], 2026), []);
 });
 
 test("formatYenCompact: 万・億の概数表示", () => {
