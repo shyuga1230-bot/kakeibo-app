@@ -20,7 +20,7 @@ import { logoutAction } from "@/app/actions";
 
 const NAV = [
   { href: "/", label: "登録", icon: PenLine },
-  { href: "/analysis", label: "併売分析", icon: TrendingUp },
+  { href: "/analysis", label: "分析", icon: TrendingUp },
   { href: "/history", label: "履歴", icon: History },
   { href: "/items", label: "商品管理", icon: Package },
   { href: "/projects", label: "案件管理", icon: FolderKanban },

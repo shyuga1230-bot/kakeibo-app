@@ -130,6 +130,18 @@ export async function deleteQuote(id: number): Promise<void> {
   await getPrisma().quote.delete({ where: { id } });
 }
 
+/** 売上分析用: 全見積もりの日付と明細(項目名・金額)を読み込む */
+export async function loadQuotesForSales(): Promise<
+  { quoteDate: string; items: { itemName: string; amount: number | null }[] }[]
+> {
+  return await getPrisma().quote.findMany({
+    select: {
+      quoteDate: true,
+      items: { select: { itemName: true, amount: true } },
+    },
+  });
+}
+
 /** CSVエクスポート用: 全データ(明細1行 = CSV1行) */
 export async function loadAllForExport(): Promise<QuoteWithItems[]> {
   return await getPrisma().quote.findMany({

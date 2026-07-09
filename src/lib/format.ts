@@ -19,6 +19,16 @@ export function todayLocalISO(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** 12345678 → "1,235万" のような概数(グラフのラベルなど狭い場所用) */
+export function formatYenCompact(n: number): string {
+  if (n >= 100_000_000) {
+    const oku = n / 100_000_000;
+    return `${oku >= 10 ? Math.round(oku).toLocaleString("ja-JP") : oku.toFixed(1)}億`;
+  }
+  if (n >= 10_000) return `${Math.round(n / 10_000).toLocaleString("ja-JP")}万`;
+  return n.toLocaleString("ja-JP");
+}
+
 /** "2026-07-09" → "7/9" (案件管理表のセルなど狭い場所用) */
 export function formatMonthDay(isoDate: string): string {
   const m = isoDate.match(/^\d{4}-(\d{2})-(\d{2})$/);
