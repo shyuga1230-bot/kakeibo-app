@@ -20,7 +20,7 @@ import { logoutAction } from "@/app/actions";
 
 const NAV = [
   { href: "/", label: "登録", icon: PenLine },
-  { href: "/analysis", label: "併売分析", icon: TrendingUp },
+  { href: "/analysis", label: "分析", icon: TrendingUp },
   { href: "/history", label: "履歴", icon: History },
   { href: "/items", label: "商品管理", icon: Package },
   { href: "/projects", label: "案件管理", icon: FolderKanban },
@@ -43,42 +43,21 @@ const DEFAULT_SECTION = {
   SummaryBar: SummaryBar,
 } as const;
 
-/**
- * ヘッダーの共通の器。上端にアンバーのブランドライン、
- * 背景は奥行きのある多層グラデーション(ネイビー+左上にアンバー、右上にブルーの光)。
- */
+/** ヘッダーの共通の器(白基調・下線のみのすっきりした見た目) */
 function HeaderShell({ children }: { children: React.ReactNode }) {
   return (
-    <header className="relative isolate overflow-hidden bg-slate-950 text-white shadow-lg shadow-slate-950/20">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(90rem 36rem at 112% -30%, rgba(59,130,246,0.28), transparent 60%)," +
-            "radial-gradient(42rem 20rem at -6% -45%, rgba(245,158,11,0.20), transparent 60%)," +
-            "linear-gradient(115deg, #020617 0%, #0f1f42 48%, #0a1530 100%)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="h-[3px] w-full bg-gradient-to-r from-amber-600 via-amber-400 to-orange-500"
-      />
-      {children}
-    </header>
+    <header className="border-b border-slate-200 bg-white">{children}</header>
   );
 }
 
 /** Arkのロゴとアプリ名(ヘッダー用) */
 function Brand() {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <ArkLogo size={34} />
-      <h1 className="min-w-0 leading-tight">
-        <span className="block bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-lg font-extrabold tracking-wide text-transparent sm:text-xl">
-          Ark
-        </span>
-        <span className="block truncate text-[11px] font-medium tracking-wider text-slate-300 sm:text-xs">
+    <div className="flex min-w-0 items-center gap-2">
+      <ArkLogo size={30} />
+      <h1 className="flex min-w-0 items-baseline gap-2 leading-none">
+        <span className="text-lg font-extrabold tracking-wide text-blue-700">Ark</span>
+        <span className="hidden truncate text-[11px] font-medium tracking-wider text-slate-500 lg:inline">
           見積・案件データベース
         </span>
       </h1>
@@ -103,59 +82,64 @@ export default function Header() {
 
   return (
     <HeaderShell>
-      <div className="mx-auto max-w-5xl px-4 pb-2 pt-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Brand />
-          <div className="flex items-center gap-1 text-xs">
+      {/* 1行目: ロゴ・画面切り替え・CSV/ログアウト(スマホではナビが下の行に折り返す) */}
+      <div className="mx-auto max-w-5xl px-4">
+        <div className="flex flex-wrap items-center gap-x-3">
+          <div className="py-2">
+            <Brand />
+          </div>
+          <nav
+            className="order-last -mb-px flex w-full gap-0.5 sm:order-none sm:ml-3 sm:w-auto sm:self-stretch"
+            aria-label="画面の切り替え"
+          >
+            {NAV.map(({ href, label, icon: Icon }) => {
+              const active =
+                href === "/" ? pathname === "/" : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 px-1.5 py-2.5 text-sm font-medium sm:flex-none sm:px-4 ${
+                    active
+                      ? "border-blue-600 font-semibold text-blue-700"
+                      : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                  }`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon className="h-4 w-4" aria-hidden />
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="ml-auto flex items-center gap-1 py-2 text-xs">
             <a
               href={section.exportHref}
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               title={section.exportTitle}
             >
               <Download className="h-4 w-4" aria-hidden />
-              <span className="hidden sm:inline">CSVを保存</span>
+              <span className="hidden md:inline">CSVを保存</span>
             </a>
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
+                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                 title="ログアウトしてログイン画面に戻ります"
               >
                 <LogOut className="h-4 w-4" aria-hidden />
-                <span className="hidden sm:inline">ログアウト</span>
+                <span className="hidden md:inline">ログアウト</span>
               </button>
             </form>
           </div>
         </div>
+      </div>
 
-        <div className="mt-3">
+      {/* 2行目: サマリー(見積 or 案件の集計)を1行のストリップで表示 */}
+      <div className="border-t border-slate-100 bg-slate-50/70">
+        <div className="mx-auto max-w-5xl px-4 py-1.5">
           <section.SummaryBar />
         </div>
-
-        <nav className="mt-3 flex gap-1" aria-label="画面の切り替え">
-          {NAV.map(({ href, label, icon: Icon }) => {
-            const active =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-t-lg border-t-2 px-3 py-2 text-sm font-medium sm:flex-none sm:px-5 ${
-                  active
-                    ? "border-amber-400 bg-slate-100 font-semibold text-slate-900"
-                    : "border-transparent text-slate-300 hover:bg-white/10 hover:text-white"
-                }`}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon
-                  className={`h-4 w-4 ${active ? "text-amber-600" : ""}`}
-                  aria-hidden
-                />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
     </HeaderShell>
   );

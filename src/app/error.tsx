@@ -45,7 +45,7 @@ export default function ErrorPage({
         <button
           type="button"
           onClick={() => retry()}
-          className="mt-4 flex items-center gap-2 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800"
+          className="mt-4 flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           <RotateCcw className="h-4 w-4" aria-hidden />
           もう一度読み込む

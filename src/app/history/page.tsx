@@ -28,7 +28,7 @@ export default async function HistoryPage({
         <p className="text-slate-600">まだ見積もりが登録されていません。</p>
         <Link
           href="/"
-          className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           <PenLine className="h-4 w-4" aria-hidden />
           登録画面で最初の1件を登録する

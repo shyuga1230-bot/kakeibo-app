@@ -30,10 +30,26 @@ const TOTAL_ROW = /合計|小計|総額|消費税|税抜|税込|御見積条件|
 // 項目名の列が「合計」などで始まる場合だけ締めとみなす
 // (「数量合計表作成」のような、語を含むだけの項目名は締め扱いしない)
 const TOTAL_NAME = /^(合計|総額|消費税|税抜|税込|御見積条件|見積価格|測量価格)/;
-// 「小計」で始まる行は区切りの小計なので、終了せず読み飛ばして続きを読む
-const SUBTOTAL_NAME = /^小計/;
+// 「小計」「中計」「計」だけの行は区切りなので、終了せず読み飛ばして続きを読む
+const SUBTOTAL_NAME = /^小計|^中計|^計$/;
 // 見出し行(【…】)
 const SECTION_ROW = /^[\s　]*【.*】?[\s　]*$/;
+// ※や・で始まる注記の行、「以下余白」の行は項目にしない
+const NOTE_ROW = /^[※*＊・●○◎■□◆★☆▲△]/;
+const BLANK_BELOW = /^以下、?余白/;
+// 明細の見出し行の判定(表記ゆれに対応)
+const NAME_HEADER = /費目|品名|品目|名称|項目|内容|工種/;
+const AMOUNT_HEADER = /^御?見積金額|^金額/;
+// 数量・単位だけのセル(項目名として拾わない)
+const UNIT_ONLY =
+  /^(式|一式|人工?|m|mm|km|m2|m3|㎡|㎥|t|kg|ha|個|台|本|回|日|月|人日|箇所|ヶ所|カ所|か所|セット|組|枚|基|往復)$/i;
+
+/** 数字・金額・単位だけのセルか(結合セルの項目名探しで読み飛ばす) */
+function looksLikeValueCell(cell: string): boolean {
+  const r = parseAmount(cell);
+  if (!r.error && r.value != null) return true;
+  return UNIT_ONLY.test(squash(cell));
+}
 
 const MAX_ITEMS = 30;
 
@@ -152,9 +168,9 @@ export function parseQuoteSheet(text: string): ParseSheetResult {
   let amountCol = -1;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const nameIdx = row.findIndex((c) => /費目|品名/.test(squash(c)));
-    const amountIdx = row.findIndex((c) => squash(c) === "金額");
-    if (nameIdx !== -1 && amountIdx !== -1) {
+    const nameIdx = row.findIndex((c) => NAME_HEADER.test(squash(c)));
+    const amountIdx = row.findIndex((c) => AMOUNT_HEADER.test(squash(c)));
+    if (nameIdx !== -1 && amountIdx !== -1 && nameIdx !== amountIdx) {
       headerIndex = i;
       nameCol = nameIdx;
       amountCol = amountIdx;
@@ -172,6 +188,7 @@ export function parseQuoteSheet(text: string): ParseSheetResult {
   // --- 明細行を読み取る --------------------------------------------------
   const items: { itemName: string; amount: number | null }[] = [];
   const skippedFees: string[] = [];
+  const skippedNoAmount: string[] = [];
   const seen = new Set<string>();
   let stoppedAt = -1; // 締め行で終了した位置(終了後の取りこぼし確認用)
 
@@ -180,21 +197,35 @@ export function parseQuoteSheet(text: string): ParseSheetResult {
     const joined = row.join("");
     if (joined === "") continue;
 
-    const rawName = row[nameCol] ?? "";
-    const squashedName = squash(rawName);
+    let rawName = row[nameCol] ?? "";
     // 締め行(合計など)が来たら終了。「合　計」のような空白入りにも対応
     if (rawName === "" && TOTAL_ROW.test(squash(joined))) {
       stoppedAt = i;
       break;
     }
-    if (rawName !== "" && TOTAL_NAME.test(squashedName)) {
+
+    const amountResult = parseAmount(row[amountCol] ?? "");
+
+    // セル結合などで項目名の列がずれている行の救済。
+    // 金額がちゃんと入っている行に限り、名前列と金額列の間から項目名を探す
+    if (rawName === "" && amountResult.value != null && amountResult.value > 0) {
+      rawName =
+        row
+          .slice(nameCol + 1, amountCol)
+          .find((c) => c !== "" && !looksLikeValueCell(c)) ?? "";
+    }
+    if (rawName === "") continue;
+
+    const squashedName = squash(rawName);
+    if (TOTAL_NAME.test(squashedName)) {
       stoppedAt = i;
       break;
     }
-    // 途中の「小計」は区切りなので読み飛ばして続きを読む
-    if (rawName !== "" && SUBTOTAL_NAME.test(squashedName)) continue;
-    if (rawName === "") continue;
+    // 途中の「小計」「計」は区切りなので読み飛ばして続きを読む
+    if (SUBTOTAL_NAME.test(squashedName)) continue;
     if (SECTION_ROW.test(rawName) && rawName.includes("【")) continue;
+    // 注記(※…)や「以下余白」は項目ではない
+    if (NOTE_ROW.test(rawName.trim()) || BLANK_BELOW.test(squashedName)) continue;
 
     const cleaned = rawName.replace(CIRCLED_PREFIX, "");
     const itemName = normalizeItemName(cleaned);
@@ -204,6 +235,12 @@ export function parseQuoteSheet(text: string): ParseSheetResult {
       skippedFees.push(itemName);
       continue;
     }
+    // 金額欄が空の行は項目にしない(区分名や備考の可能性が高い)。
+    // 読み飛ばしたことは下でまとめて知らせる
+    if (!amountResult.error && amountResult.value == null) {
+      skippedNoAmount.push(itemName);
+      continue;
+    }
     if (seen.has(itemName)) {
       warnings.push(
         `「${itemName}」が2回以上出てきたため、2回目以降は読み飛ばしました(内訳のシートを貼り付けていませんか?)。`,
@@ -211,7 +248,6 @@ export function parseQuoteSheet(text: string): ParseSheetResult {
       continue;
     }
 
-    const amountResult = parseAmount(row[amountCol] ?? "");
     if (amountResult.error) {
       warnings.push(
         `「${itemName}」の金額「${row[amountCol]}」を読み取れなかったため、金額は空欄にしました。`,
@@ -253,6 +289,15 @@ export function parseQuoteSheet(text: string): ParseSheetResult {
   if (skippedFees.length > 0) {
     warnings.push(
       `経費などの行は読み飛ばしました: ${[...new Set(skippedFees)].join("、")}`,
+    );
+  }
+  if (skippedNoAmount.length > 0) {
+    const names = [...new Set(skippedNoAmount)];
+    const shown = names.slice(0, 8).join("、");
+    warnings.push(
+      `金額が入っていない行は項目にしませんでした: ${shown}${
+        names.length > 8 ? ` 他${names.length - 8}件` : ""
+      }(必要ならフォームに手で追加してください)`,
     );
   }
 

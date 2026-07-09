@@ -11,12 +11,27 @@ export type MasterItem = {
   defaultAmount: number | null;
 };
 
+export type MasterItemWithSales = MasterItem & {
+  /** この商品が見積もりに登録された件数(売れている度合いの色分け用) */
+  salesCount: number;
+};
+
 /** 商品マスタの一覧(登録した順) */
 export async function listMasterItems(): Promise<MasterItem[]> {
   return await getPrisma().item.findMany({
     select: { id: true, name: true, defaultAmount: true },
     orderBy: { id: "asc" },
   });
+}
+
+/** 商品マスタの一覧に、見積もりへ登録された件数を付けて返す */
+export async function listMasterItemsWithSales(): Promise<MasterItemWithSales[]> {
+  const [items, stats] = await Promise.all([
+    listMasterItems(),
+    loadAllQuoteItems().then(computeItemStats),
+  ]);
+  const countByName = new Map(stats.map((s) => [s.itemName, s.caseCount]));
+  return items.map((i) => ({ ...i, salesCount: countByName.get(i.name) ?? 0 }));
 }
 
 export async function createMasterItem(

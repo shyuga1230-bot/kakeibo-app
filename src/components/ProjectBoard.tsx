@@ -165,7 +165,7 @@ function StageEditDialog({
           type="button"
           onClick={save}
           disabled={pending}
-          className="rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
           {pending ? "保存中…" : "保存"}
         </button>
@@ -247,7 +247,7 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
       aria-pressed={phaseFilter === value}
       className={`rounded-full px-3 py-1 text-xs font-medium ${
         phaseFilter === value
-          ? "bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 text-white"
+          ? "bg-blue-600 text-white"
           : "bg-white text-slate-600 ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
       }`}
     >
@@ -362,7 +362,7 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
                     <div className="mt-1.5 flex items-center gap-1.5">
                       <div className="h-1.5 w-full max-w-28 overflow-hidden rounded bg-slate-100">
                         <div
-                          className="h-full rounded bg-gradient-to-r from-emerald-400 to-green-600"
+                          className="h-full rounded bg-green-500"
                           style={{ width: `${p.progress.percent}%` }}
                         />
                       </div>

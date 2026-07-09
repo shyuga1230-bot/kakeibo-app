@@ -51,9 +51,9 @@ export default function HeaderSummaryBar<T>({
 
   if (failed && !data) {
     return (
-      <div className="text-xs text-slate-300">
+      <div className="text-xs text-slate-500">
         集計を読み込めませんでした{" "}
-        <button onClick={load} className="underline hover:text-white">
+        <button onClick={load} className="underline hover:text-slate-800">
           再読み込み
         </button>
       </div>
@@ -65,16 +65,11 @@ export default function HeaderSummaryBar<T>({
     : loadingLabels.map((label) => ({ label, value: "…" }));
 
   return (
-    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
+    <div className="flex flex-wrap items-baseline gap-x-5 gap-y-0.5 sm:gap-x-8">
       {items.map(({ label, value }) => (
-        <div
-          key={label}
-          className="flex flex-col items-center rounded-lg bg-gradient-to-b from-white/[0.14] to-white/[0.03] px-2 py-1.5 ring-1 ring-inset ring-white/10"
-        >
-          <span className="text-[11px] leading-tight tracking-wide text-slate-400">
-            {label}
-          </span>
-          <span className="tabular-nums text-sm font-bold leading-tight text-white sm:text-base">
+        <div key={label} className="flex items-baseline gap-1.5">
+          <span className="text-[11px] text-slate-500">{label}</span>
+          <span className="tabular-nums text-sm font-bold text-slate-900">
             {value}
           </span>
         </div>

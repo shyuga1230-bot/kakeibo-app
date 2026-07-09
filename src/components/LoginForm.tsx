@@ -28,7 +28,7 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="flex w-full items-center justify-center gap-2 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2.5 font-medium text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
       >
         <LogIn className="h-4 w-4" aria-hidden />
         {pending ? "確認中…" : "ログインする"}
