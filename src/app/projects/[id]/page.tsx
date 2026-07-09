@@ -7,7 +7,7 @@ import { listPartners } from "@/lib/partners";
 import { toBoardProject } from "@/lib/project-board";
 import ProjectDetailLive from "@/components/ProjectDetailLive";
 
-export const metadata = { title: "案件の詳細 | 見積もり併売データベース" };
+export const metadata = { title: "案件の詳細 | Ark 見積・案件データベース" };
 
 export default async function ProjectDetailPage({
   params,

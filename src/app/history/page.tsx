@@ -7,7 +7,7 @@ import { listQuotes } from "@/lib/quotes";
 import { formatDate, formatYen } from "@/lib/format";
 import DeleteQuoteButton from "@/components/DeleteQuoteButton";
 
-export const metadata = { title: "履歴 | 見積もり併売データベース" };
+export const metadata = { title: "履歴 | Ark 見積・案件データベース" };
 
 export default async function HistoryPage({
   searchParams,
@@ -24,11 +24,11 @@ export default async function HistoryPage({
 
   if (total === 0) {
     return (
-      <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+      <div className="rounded-xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-900/5">
         <p className="text-slate-600">まだ見積もりが登録されていません。</p>
         <Link
           href="/"
-          className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+          className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800"
         >
           <PenLine className="h-4 w-4" aria-hidden />
           登録画面で最初の1件を登録する
@@ -54,7 +54,7 @@ export default async function HistoryPage({
             q.customerName ?? "(顧客名なし)"
           }(${q.items.length}項目)`;
           return (
-            <li key={q.id} className="rounded-xl bg-white p-4 shadow-sm">
+            <li key={q.id} className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">

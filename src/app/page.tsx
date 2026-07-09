@@ -12,7 +12,7 @@ export default async function RegisterPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
         <h2 className="text-lg font-bold">見積もりを登録する</h2>
         <p className="mt-1 text-sm text-slate-600">
           受注した見積もり1件分の内容を入力してください。登録したデータは全員で共有されます。
@@ -23,7 +23,7 @@ export default async function RegisterPage() {
         </div>
       </section>
 
-      <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
         <h2 className="text-lg font-bold">まとめて登録(貼り付け取込)</h2>
         <p className="mt-1 text-sm text-slate-600">
           Excelなどで作った一覧を貼り付けて、複数の見積もりを一度に登録できます。

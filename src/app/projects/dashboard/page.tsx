@@ -16,12 +16,12 @@ import {
 import ProjectsTabs from "@/components/ProjectsTabs";
 import AutoRefresh from "@/components/AutoRefresh";
 
-export const metadata = { title: "案件ダッシュボード | 見積もり併売データベース" };
+export const metadata = { title: "案件ダッシュボード | Ark 見積・案件データベース" };
 
 /** ラベル+件数の小さなカード */
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm">
+    <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
       <p className="text-xs text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-bold tabular-nums">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
@@ -43,7 +43,7 @@ function CompanyTable({
 }) {
   const top = rows.slice(0, 10);
   return (
-    <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+    <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
       <h2 className="text-base font-bold">{title}</h2>
       <p className="mt-1 text-xs text-slate-500">{intro}</p>
       {rows.length === 0 ? (
@@ -112,14 +112,14 @@ export default async function ProjectsDashboardPage() {
       <div className="space-y-4">
         <AutoRefresh />
         <ProjectsTabs active="dashboard" />
-        <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+        <div className="rounded-xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-900/5">
           <p className="text-slate-600">まだ案件が登録されていません。</p>
           <p className="mt-1 text-sm text-slate-500">
             案件がたまると、ここで工程ごとの状況や止まっている案件を確認できます。
           </p>
           <Link
             href="/projects"
-            className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800"
           >
             <ListChecks className="h-4 w-4" aria-hidden />
             一覧表で最初の案件を登録する
@@ -174,7 +174,7 @@ export default async function ProjectsDashboardPage() {
         />
       </div>
 
-      <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
         <h2 className="text-lg font-bold">いま止まっている工程</h2>
         <p className="mt-1 text-sm text-slate-600">
           未完了の案件が、いまどの工程で止まっているかの件数です。棒が長い工程に仕事がたまっています。
@@ -187,7 +187,7 @@ export default async function ProjectsDashboardPage() {
               </span>
               <div className="h-4 flex-1 rounded bg-slate-50">
                 <div
-                  className="h-full rounded bg-blue-600"
+                  className="h-full rounded bg-gradient-to-r from-blue-500 to-indigo-600"
                   style={{ width: `${(count / maxBottleneck) * 100}%` }}
                   role="img"
                   aria-label={`${stage.label}で止まっている案件 ${count}件`}
@@ -208,7 +208,7 @@ export default async function ProjectsDashboardPage() {
         </div>
       </section>
 
-      <section className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
         <h2 className="text-lg font-bold">工程別の状況</h2>
         <p className="mt-1 text-sm text-slate-600">
           全{total}件の案件が、工程ごとにどの状態かの内訳です。

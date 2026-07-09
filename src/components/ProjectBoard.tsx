@@ -165,7 +165,7 @@ function StageEditDialog({
           type="button"
           onClick={save}
           disabled={pending}
-          className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
+          className="rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800 disabled:opacity-50"
         >
           {pending ? "保存中…" : "保存"}
         </button>
@@ -247,7 +247,7 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
       aria-pressed={phaseFilter === value}
       className={`rounded-full px-3 py-1 text-xs font-medium ${
         phaseFilter === value
-          ? "bg-blue-700 text-white"
+          ? "bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 text-white"
           : "bg-white text-slate-600 ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
       }`}
     >
@@ -305,7 +305,7 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+        <div className="rounded-xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-900/5">
           <p className="text-slate-600">
             {projects.length === 0
               ? "まだ案件が登録されていません。右上の「案件を追加」から最初の1件を登録してください。"
@@ -362,7 +362,7 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
                     <div className="mt-1.5 flex items-center gap-1.5">
                       <div className="h-1.5 w-full max-w-28 overflow-hidden rounded bg-slate-100">
                         <div
-                          className="h-full rounded bg-green-500"
+                          className="h-full rounded bg-gradient-to-r from-emerald-400 to-green-600"
                           style={{ width: `${p.progress.percent}%` }}
                         />
                       </div>

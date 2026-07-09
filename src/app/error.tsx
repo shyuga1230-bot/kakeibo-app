@@ -20,7 +20,7 @@ export default function ErrorPage({
   const retry = unstable_retry ?? reset;
 
   return (
-    <div className="mx-auto mt-8 max-w-lg rounded-xl bg-white p-6 shadow-sm">
+    <div className="mx-auto mt-8 max-w-lg rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5">
       <h2 className="flex items-center gap-2 text-lg font-bold text-red-700">
         <TriangleAlert className="h-5 w-5" aria-hidden />
         エラーが発生しました
@@ -45,7 +45,7 @@ export default function ErrorPage({
         <button
           type="button"
           onClick={() => retry()}
-          className="mt-4 flex items-center gap-2 rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+          className="mt-4 flex items-center gap-2 rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800"
         >
           <RotateCcw className="h-4 w-4" aria-hidden />
           もう一度読み込む

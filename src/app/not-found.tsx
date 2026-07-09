@@ -10,7 +10,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="mt-4 inline-block rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800"
+        className="mt-4 inline-block rounded-md bg-gradient-to-b from-blue-600 to-blue-700 shadow-sm shadow-blue-900/20 px-4 py-2 text-sm font-medium text-white hover:from-blue-700 hover:to-blue-800"
       >
         登録画面に戻る
       </Link>

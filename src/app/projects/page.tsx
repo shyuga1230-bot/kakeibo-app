@@ -9,7 +9,7 @@ import ProjectBoard from "@/components/ProjectBoard";
 import NewProjectButton from "@/components/NewProjectButton";
 import ProjectsTabs from "@/components/ProjectsTabs";
 
-export const metadata = { title: "案件管理 | 見積もり併売データベース" };
+export const metadata = { title: "案件管理 | Ark 見積・案件データベース" };
 
 export default async function ProjectsPage() {
   if (!(await getSession())) redirect("/login");
