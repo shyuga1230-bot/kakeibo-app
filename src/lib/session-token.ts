@@ -10,6 +10,8 @@ export const SESSION_DAYS = 30;
 export type SessionPayload = {
   // 現在は全員共通の "shared"。ユーザー別アカウント化するときはここにIDを入れる
   user: string;
+  // ログイン時に入力した名前(誰が登録・変更したかの記録用)
+  name?: string;
 };
 
 // 鍵の計算(scrypt)は重い処理なので、一度計算したら使い回す
@@ -60,7 +62,12 @@ export async function verifySessionToken(
   try {
     const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
     if (typeof payload.user !== "string") return null;
-    return { user: payload.user };
+    return {
+      user: payload.user,
+      ...(typeof payload.name === "string" && payload.name !== ""
+        ? { name: payload.name }
+        : {}),
+    };
   } catch {
     return null;
   }

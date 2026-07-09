@@ -18,8 +18,8 @@ function cookieSecure(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
-export async function setSessionCookie(): Promise<void> {
-  const token = await createSessionToken({ user: "shared" });
+export async function setSessionCookie(name?: string): Promise<void> {
+  const token = await createSessionToken({ user: "shared", name });
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,

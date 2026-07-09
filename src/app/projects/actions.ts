@@ -101,13 +101,14 @@ export async function createProjectAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  if (!(await getSession())) return NOT_LOGGED_IN;
+  const session = await getSession();
+  if (!session) return NOT_LOGGED_IN;
 
   const validated = validateProjectForm(formData);
   if (!validated.ok) return validated;
 
   try {
-    await createProject(validated.input);
+    await createProject(validated.input, session.name ?? null);
     await addPartnerToMaster(validated.input.partnerName);
   } catch (e) {
     console.error("createProjectAction failed:", e);
@@ -124,7 +125,8 @@ export async function updateProjectAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  if (!(await getSession())) return NOT_LOGGED_IN;
+  const session = await getSession();
+  if (!session) return NOT_LOGGED_IN;
   if (!Number.isInteger(projectId) || projectId <= 0) {
     return { ok: false, error: "編集対象の案件が見つかりません。" };
   }
@@ -134,7 +136,7 @@ export async function updateProjectAction(
 
   try {
     if (!(await projectExists(projectId))) return ALREADY_DELETED;
-    await updateProject(projectId, validated.input);
+    await updateProject(projectId, validated.input, session.name ?? null);
     await addPartnerToMaster(validated.input.partnerName);
   } catch (e) {
     console.error("updateProjectAction failed:", e);
@@ -144,13 +146,14 @@ export async function updateProjectAction(
 }
 
 export async function deleteProjectAction(projectId: number): Promise<ActionResult> {
-  if (!(await getSession())) return NOT_LOGGED_IN;
+  const session = await getSession();
+  if (!session) return NOT_LOGGED_IN;
   if (!Number.isInteger(projectId) || projectId <= 0) {
     return { ok: false, error: "削除対象の案件が見つかりません。" };
   }
   try {
     if (!(await projectExists(projectId))) return ALREADY_DELETED;
-    await deleteProject(projectId);
+    await deleteProject(projectId, session.name ?? null);
   } catch (e) {
     console.error("deleteProjectAction failed:", e);
     return {
@@ -158,7 +161,7 @@ export async function deleteProjectAction(projectId: number): Promise<ActionResu
       error: "削除に失敗しました。少し待ってからもう一度お試しください。",
     };
   }
-  return { ok: true, message: "案件を削除しました。" };
+  return { ok: true, message: "案件をごみ箱に移動しました(30日以内なら戻せます)。" };
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +173,8 @@ export async function assignPartnerAction(
   projectId: number,
   partnerName: string | null,
 ): Promise<ActionResult> {
-  if (!(await getSession())) return NOT_LOGGED_IN;
+  const session = await getSession();
+  if (!session) return NOT_LOGGED_IN;
   if (!Number.isInteger(projectId) || projectId <= 0) {
     return { ok: false, error: "対象の案件が見つかりません。" };
   }
@@ -180,7 +184,7 @@ export async function assignPartnerAction(
   }
   try {
     if (!(await projectExists(projectId))) return ALREADY_DELETED;
-    await assignPartner(projectId, name);
+    await assignPartner(projectId, name, session.name ?? null);
     await addPartnerToMaster(name);
   } catch (e) {
     console.error("assignPartnerAction failed:", e);
@@ -337,7 +341,8 @@ export type StageUpdatePayload = {
 export async function updateStageAction(
   payload: StageUpdatePayload,
 ): Promise<ActionResult> {
-  if (!(await getSession())) return NOT_LOGGED_IN;
+  const session = await getSession();
+  if (!session) return NOT_LOGGED_IN;
 
   const projectId = Number(payload.projectId);
   if (!Number.isInteger(projectId) || projectId <= 0) {
@@ -374,7 +379,7 @@ export async function updateStageAction(
         };
       }
     }
-    await upsertStage(projectId, stageKeyRaw, validated.input);
+    await upsertStage(projectId, stageKeyRaw, validated.input, session.name ?? null);
   } catch (e) {
     console.error("updateStageAction failed:", e);
     return { ok: false, error: SAVE_FAILED };
@@ -388,7 +393,8 @@ export async function updateStagesAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  if (!(await getSession())) return NOT_LOGGED_IN;
+  const session = await getSession();
+  if (!session) return NOT_LOGGED_IN;
   if (!Number.isInteger(projectId) || projectId <= 0) {
     return { ok: false, error: "編集対象の案件が見つかりません。" };
   }
@@ -425,7 +431,7 @@ export async function updateStagesAction(
   try {
     const existing = await getProject(projectId);
     if (!existing) return ALREADY_DELETED;
-    await updateStages(projectId, inputs, existing.stages);
+    await updateStages(projectId, inputs, existing.stages, session.name ?? null);
   } catch (e) {
     console.error("updateStagesAction failed:", e);
     return { ok: false, error: SAVE_FAILED };

@@ -18,11 +18,16 @@ model Quote {
   quoteDate    String      @map("quote_date")
   customerName String?     @map("customer_name")
   memo         String?
+  // 登録した人の名前(ログイン時に入力した名前)
+  createdBy    String?     @map("created_by")
+  // ごみ箱に入れた日時。NULL = 削除されていない。30日で完全削除される
+  deletedAt    DateTime?   @map("deleted_at")
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
   items        QuoteItem[]
 
   @@index([quoteDate])
+  @@index([deletedAt])
   @@map("quotes")
 }
 
@@ -52,12 +57,15 @@ model Project {
   projectName String         @map("project_name")
   // 備考(Excelの備考行に相当)
   memo        String?
+  // ごみ箱に入れた日時。NULL = 削除されていない。30日で完全削除される
+  deletedAt   DateTime?      @map("deleted_at")
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
   stages      ProjectStage[]
   logs        ProjectLog[]
 
   @@index([clientName])
+  @@index([deletedAt])
   @@map("projects")
 }
 
@@ -100,6 +108,8 @@ model ProjectLog {
   projectId Int      @map("project_id")
   // 変更内容の説明(例: 「起工測量」を「完了」に変更)
   action    String
+  // 変更した人の名前(ログイン時に入力した名前)
+  changedBy String?  @map("changed_by")
   createdAt DateTime @default(now()) @map("created_at")
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 

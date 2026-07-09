@@ -25,7 +25,12 @@ export async function GET(
       {
         phase: project.phase,
         progress: project.progress,
-        logs: logs.map((l) => ({ id: l.id, action: l.action, at: l.createdAt.toISOString() })),
+        logs: logs.map((l) => ({
+          id: l.id,
+          action: l.action,
+          by: l.changedBy,
+          at: l.createdAt.toISOString(),
+        })),
       },
       { headers: { "Cache-Control": "no-store" } },
     );

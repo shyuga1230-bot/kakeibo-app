@@ -23,14 +23,19 @@ export type QuoteWithItems = {
   quoteDate: string;
   customerName: string | null;
   memo: string | null;
+  createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;
   items: { id: number; itemName: string; amount: number | null }[];
 };
 
+// ごみ箱に入っていない(削除されていない)見積もりだけを対象にする条件
+const notDeleted = { deletedAt: null } as const;
+
 /** 分析・サマリー用に、全見積もりの項目名と金額を読み込む */
 export async function loadAllQuoteItems(): Promise<QuoteItems[]> {
   const quotes = await getPrisma().quote.findMany({
+    where: notDeleted,
     select: {
       id: true,
       items: { select: { itemName: true, amount: true }, orderBy: { id: "asc" } },
@@ -71,17 +76,51 @@ export async function getItemNameSuggestions(): Promise<string[]> {
 
 const PAGE_SIZE = 50;
 
+/** 履歴の絞り込み条件(すべて任意) */
+export type QuoteFilter = {
+  /** 顧客名・商品名・メモのどれかに含まれる文字 */
+  q?: string;
+  /** 日付の範囲("YYYY-MM-DD") */
+  from?: string;
+  to?: string;
+};
+
+function filterWhere(filter: QuoteFilter) {
+  const conditions: object[] = [notDeleted];
+  if (filter.q) {
+    conditions.push({
+      OR: [
+        { customerName: { contains: filter.q, mode: "insensitive" as const } },
+        { memo: { contains: filter.q, mode: "insensitive" as const } },
+        {
+          items: {
+            some: { itemName: { contains: filter.q, mode: "insensitive" as const } },
+          },
+        },
+      ],
+    });
+  }
+  if (filter.from) conditions.push({ quoteDate: { gte: filter.from } });
+  if (filter.to) conditions.push({ quoteDate: { lte: filter.to } });
+  return { AND: conditions };
+}
+
 /** 履歴ページ用: 新しい順の一覧(日付の新しい順 → 同日なら登録の新しい順) */
-export async function listQuotes(page: number): Promise<{
+export async function listQuotes(
+  page: number,
+  filter: QuoteFilter = {},
+): Promise<{
   quotes: QuoteWithItems[];
   total: number;
   page: number;
   pageCount: number;
 }> {
-  const total = await getPrisma().quote.count();
+  const where = filterWhere(filter);
+  const total = await getPrisma().quote.count({ where });
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), pageCount);
   const quotes = await getPrisma().quote.findMany({
+    where,
     orderBy: [{ quoteDate: "desc" }, { id: "desc" }],
     skip: (safePage - 1) * PAGE_SIZE,
     take: PAGE_SIZE,
@@ -91,18 +130,22 @@ export async function listQuotes(page: number): Promise<{
 }
 
 export async function getQuote(id: number): Promise<QuoteWithItems | null> {
-  return await getPrisma().quote.findUnique({
-    where: { id },
+  return await getPrisma().quote.findFirst({
+    where: { id, ...notDeleted },
     include: { items: { orderBy: { id: "asc" } } },
   });
 }
 
-export async function createQuote(input: QuoteInput): Promise<number> {
+export async function createQuote(
+  input: QuoteInput,
+  createdBy: string | null = null,
+): Promise<number> {
   const quote = await getPrisma().quote.create({
     data: {
       quoteDate: input.quoteDate,
       customerName: input.customerName,
       memo: input.memo,
+      createdBy,
       items: { create: input.items },
     },
     select: { id: true },
@@ -126,8 +169,12 @@ export async function updateQuote(id: number, input: QuoteInput): Promise<void> 
   ]);
 }
 
+/** 削除 = ごみ箱へ移動(30日以内なら戻せる) */
 export async function deleteQuote(id: number): Promise<void> {
-  await getPrisma().quote.delete({ where: { id } });
+  await getPrisma().quote.update({
+    where: { id },
+    data: { deletedAt: new Date() },
+  });
 }
 
 /** 売上分析用: 全見積もりの日付と明細(項目名・金額)を読み込む */
@@ -135,6 +182,7 @@ export async function loadQuotesForSales(): Promise<
   { quoteDate: string; items: { itemName: string; amount: number | null }[] }[]
 > {
   return await getPrisma().quote.findMany({
+    where: notDeleted,
     select: {
       quoteDate: true,
       items: { select: { itemName: true, amount: true } },
@@ -145,6 +193,7 @@ export async function loadQuotesForSales(): Promise<
 /** CSVエクスポート用: 全データ(明細1行 = CSV1行) */
 export async function loadAllForExport(): Promise<QuoteWithItems[]> {
   return await getPrisma().quote.findMany({
+    where: notDeleted,
     orderBy: [{ quoteDate: "asc" }, { id: "asc" }],
     include: { items: { orderBy: { id: "asc" } } },
   });
