@@ -6,6 +6,15 @@
 
 body {
   @apply bg-slate-100 text-slate-800 antialiased;
+  /* ネイビーとアンバーをほんのり感じる背景(Arkのブランドカラー) */
+  background-image:
+    radial-gradient(60rem 24rem at 8% -4rem, rgba(30, 58, 138, 0.05), transparent),
+    radial-gradient(52rem 22rem at 100% 110%, rgba(245, 158, 11, 0.045), transparent);
+  background-attachment: fixed;
+}
+
+::selection {
+  background-color: rgba(245, 158, 11, 0.3);
 }
 
 /* 数字の桁が揃うようにする(サマリーや金額表示用) */

@@ -8,7 +8,7 @@ import { formatYen } from "@/lib/format";
 import { normalizeItemName } from "@/lib/normalize";
 import ItemPicker from "@/components/ItemPicker";
 
-export const metadata = { title: "併売分析 | 見積もり併売データベース" };
+export const metadata = { title: "併売分析 | Ark 見積・案件データベース" };
 
 // データ件数がこれ未満の間は「割合がぶれやすい」注意書きを出す
 const FEW_DATA_THRESHOLD = 30;

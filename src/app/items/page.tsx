@@ -5,7 +5,7 @@ import { getSession } from "@/lib/session";
 import { listMasterItems } from "@/lib/items";
 import ItemMasterManager from "@/components/ItemMasterManager";
 
-export const metadata = { title: "商品管理 | 見積もり併売データベース" };
+export const metadata = { title: "商品管理 | Ark 見積・案件データベース" };
 
 export default async function ItemsPage() {
   if (!(await getSession())) redirect("/login");

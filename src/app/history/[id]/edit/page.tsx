@@ -7,7 +7,7 @@ import { getQuote } from "@/lib/quotes";
 import { listMasterItems } from "@/lib/items";
 import QuoteForm from "@/components/QuoteForm";
 
-export const metadata = { title: "見積もりの編集 | 見積もり併売データベース" };
+export const metadata = { title: "見積もりの編集 | Ark 見積・案件データベース" };
 
 export default async function EditQuotePage({
   params,

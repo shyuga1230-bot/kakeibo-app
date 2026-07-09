@@ -7,7 +7,7 @@ import { listQuotes } from "@/lib/quotes";
 import { formatDate, formatYen } from "@/lib/format";
 import DeleteQuoteButton from "@/components/DeleteQuoteButton";
 
-export const metadata = { title: "履歴 | 見積もり併売データベース" };
+export const metadata = { title: "履歴 | Ark 見積・案件データベース" };
 
 export default async function HistoryPage({
   searchParams,

@@ -1,11 +1,10 @@
 "use client";
-// 全画面共通のヘッダー。タイトル・サマリー4項目・画面切り替え・CSV・ログアウト。
+// 全画面共通のヘッダー。Arkのロゴ・タイトル・サマリー4項目・画面切り替え・CSV・ログアウト。
 // 案件管理の画面では、サマリーとCSVボタンも案件管理用のものに切り替わる。
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ClipboardList,
   Download,
   FolderKanban,
   History,
@@ -14,6 +13,7 @@ import {
   PenLine,
   TrendingUp,
 } from "lucide-react";
+import ArkLogo from "@/components/ArkLogo";
 import SummaryBar from "@/components/SummaryBar";
 import ProjectSummaryBar from "@/components/ProjectSummaryBar";
 import { logoutAction } from "@/app/actions";
@@ -43,6 +43,23 @@ const DEFAULT_SECTION = {
   SummaryBar: SummaryBar,
 } as const;
 
+/** Arkのロゴとアプリ名(ヘッダー用) */
+function Brand() {
+  return (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <ArkLogo size={34} />
+      <h1 className="min-w-0 leading-tight">
+        <span className="block bg-gradient-to-r from-amber-300 to-amber-500 bg-clip-text text-lg font-extrabold tracking-wide text-transparent sm:text-xl">
+          Ark
+        </span>
+        <span className="block truncate text-[11px] font-medium tracking-wider text-slate-300 sm:text-xs">
+          見積・案件データベース
+        </span>
+      </h1>
+    </div>
+  );
+}
+
 export default function Header() {
   const pathname = usePathname();
   // いまの画面に合わせて、サマリーとCSVボタンを切り替える
@@ -50,29 +67,23 @@ export default function Header() {
 
   if (pathname === "/login") {
     return (
-      <header className="bg-blue-800 text-white">
-        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-3">
-          <ClipboardList className="h-5 w-5" aria-hidden />
-          <h1 className="text-base font-bold sm:text-lg">見積もり併売データベース</h1>
+      <header className="border-b border-amber-500/60 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white">
+        <div className="mx-auto flex max-w-5xl items-center px-4 py-3">
+          <Brand />
         </div>
       </header>
     );
   }
 
   return (
-    <header className="bg-blue-800 text-white shadow-md">
+    <header className="border-b border-amber-500/60 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white shadow-lg shadow-slate-900/10">
       <div className="mx-auto max-w-5xl px-4 pb-2 pt-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5 shrink-0" aria-hidden />
-            <h1 className="text-base font-bold sm:text-lg">
-              見積もり併売データベース
-            </h1>
-          </div>
+          <Brand />
           <div className="flex items-center gap-1 text-xs">
             <a
               href={section.exportHref}
-              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-blue-100 hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
               title={section.exportTitle}
             >
               <Download className="h-4 w-4" aria-hidden />
@@ -81,7 +92,7 @@ export default function Header() {
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-blue-100 hover:bg-white/10 hover:text-white"
+                className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
                 title="ログアウトしてログイン画面に戻ります"
               >
                 <LogOut className="h-4 w-4" aria-hidden />
@@ -91,11 +102,11 @@ export default function Header() {
           </div>
         </div>
 
-        <div className="mt-2">
+        <div className="mt-3">
           <section.SummaryBar />
         </div>
 
-        <nav className="mt-2 flex gap-1" aria-label="画面の切り替え">
+        <nav className="mt-3 flex gap-1" aria-label="画面の切り替え">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active =
               href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -103,14 +114,17 @@ export default function Header() {
               <Link
                 key={href}
                 href={href}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-t-lg px-3 py-2 text-sm font-medium sm:flex-none sm:px-5 ${
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-t-lg border-t-2 px-3 py-2 text-sm font-medium sm:flex-none sm:px-5 ${
                   active
-                    ? "bg-slate-100 text-blue-800"
-                    : "text-blue-100 hover:bg-white/10 hover:text-white"
+                    ? "border-amber-400 bg-slate-100 font-semibold text-slate-900"
+                    : "border-transparent text-slate-300 hover:bg-white/10 hover:text-white"
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                <Icon className="h-4 w-4" aria-hidden />
+                <Icon
+                  className={`h-4 w-4 ${active ? "text-amber-600" : ""}`}
+                  aria-hidden
+                />
                 {label}
               </Link>
             );

@@ -7,7 +7,7 @@ import { toBoardProject } from "@/lib/project-board";
 import ProjectsTabs from "@/components/ProjectsTabs";
 import AssignView from "@/components/AssignView";
 
-export const metadata = { title: "振分け | 見積もり併売データベース" };
+export const metadata = { title: "振分け | Ark 見積・案件データベース" };
 
 export default async function AssignPage() {
   if (!(await getSession())) redirect("/login");

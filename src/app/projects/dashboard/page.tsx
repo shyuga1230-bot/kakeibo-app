@@ -16,7 +16,7 @@ import {
 import ProjectsTabs from "@/components/ProjectsTabs";
 import AutoRefresh from "@/components/AutoRefresh";
 
-export const metadata = { title: "案件ダッシュボード | 見積もり併売データベース" };
+export const metadata = { title: "案件ダッシュボード | Ark 見積・案件データベース" };
 
 /** ラベル+件数の小さなカード */
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
