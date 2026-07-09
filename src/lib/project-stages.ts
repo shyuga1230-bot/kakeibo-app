@@ -57,35 +57,65 @@ export const STATUSES = [
 
 export type StageStatus = (typeof STATUSES)[number]["key"];
 
-const STAGE_KEY_SET = new Set<string>(STAGES.map((s) => s.key));
-const STATUS_KEY_SET = new Set<string>(STATUSES.map((s) => s.key));
+const STAGE_LABELS = new Map<string, string>(STAGES.map((s) => [s.key, s.label]));
+const STATUS_DEFS = new Map<string, (typeof STATUSES)[number]>(
+  STATUSES.map((s) => [s.key, s]),
+);
 
 export function isStageKey(value: string): value is StageKey {
-  return STAGE_KEY_SET.has(value);
+  return STAGE_LABELS.has(value);
 }
 
 export function isStageStatus(value: string): value is StageStatus {
-  return STATUS_KEY_SET.has(value);
+  return STATUS_DEFS.has(value);
 }
 
 export function stageLabel(key: StageKey): string {
-  return STAGES.find((s) => s.key === key)?.label ?? key;
+  return STAGE_LABELS.get(key) ?? key;
 }
 
 export function statusDef(status: StageStatus) {
-  return STATUSES.find((s) => s.key === status) ?? STATUSES[0];
+  return STATUS_DEFS.get(status) ?? STATUSES[0];
 }
 
-/** 1案件分の工程の状態(行が無い工程は「未着手」扱い) */
-export type StageStateMap = Partial<
-  Record<StageKey, { status: StageStatus; date: string | null; memo: string | null }>
->;
+/** 工程1マス分の状態(状態・日付・メモ) */
+export type StageState = {
+  status: StageStatus;
+  date: string | null;
+  memo: string | null;
+};
 
-export function stageState(
-  map: StageStateMap,
-  key: StageKey,
-): { status: StageStatus; date: string | null; memo: string | null } {
-  return map[key] ?? { status: "not_started", date: null, memo: null };
+/** 1案件分の工程の状態(行が無い工程は「未着手」扱い) */
+export type StageStateMap = Partial<Record<StageKey, StageState>>;
+
+const NOT_STARTED: StageState = { status: "not_started", date: null, memo: null };
+
+export function stageState(map: StageStateMap, key: StageKey): StageState {
+  return map[key] ?? NOT_STARTED;
+}
+
+/** 工程1マス分の状態が同じかどうか(同時編集の検出と「変更された工程」の判定で共通) */
+export function sameStageState(a: StageState, b: StageState): boolean {
+  return (
+    a.status === b.status &&
+    (a.date ?? null) === (b.date ?? null) &&
+    (a.memo ?? null) === (b.memo ?? null)
+  );
+}
+
+/**
+ * 状態を変えたときの日付の自動調整ルール(セルの編集・詳細ページで共通)。
+ * 「進行中」「完了」にしたとき日付が空なら今日を入れ、
+ * 「未着手」「対象外」に戻したら日付を消す。
+ */
+export function dateAfterStatusChange(
+  next: StageStatus,
+  currentDate: string,
+  today: string,
+): string {
+  if ((next === "in_progress" || next === "done") && currentDate === "") return today;
+  if (next === "not_started" || next === "not_applicable") return "";
+  return currentDate;
 }
 
 /**
@@ -135,8 +165,22 @@ export function projectPhase(map: StageStateMap): ProjectPhase {
   return anyTouched ? "in_progress" : "not_started";
 }
 
-export const PROJECT_PHASE_LABELS: Record<ProjectPhase, string> = {
-  not_started: "未着手",
-  in_progress: "進行中",
-  done: "完了",
-};
+/** 案件全体の状態の定義(ラベルとバッジの色もここで一元管理する) */
+export const PROJECT_PHASES = [
+  { key: "not_started", label: "未着手", chipClass: "bg-slate-100 text-slate-500" },
+  { key: "in_progress", label: "進行中", chipClass: "bg-amber-100 text-amber-800" },
+  { key: "done", label: "完了", chipClass: "bg-green-100 text-green-800" },
+] as const satisfies readonly { key: ProjectPhase; label: string; chipClass: string }[];
+
+export const PROJECT_PHASE_LABELS = Object.fromEntries(
+  PROJECT_PHASES.map((p) => [p.key, p.label]),
+) as Record<ProjectPhase, string>;
+
+/** 案件を状態別に数える(ヘッダーのサマリー・一覧の絞り込み・ダッシュボードで共通) */
+export function countByPhase(
+  projects: readonly { phase: ProjectPhase }[],
+): Record<ProjectPhase, number> {
+  const counts: Record<ProjectPhase, number> = { not_started: 0, in_progress: 0, done: 0 };
+  for (const p of projects) counts[p.phase] += 1;
+  return counts;
+}

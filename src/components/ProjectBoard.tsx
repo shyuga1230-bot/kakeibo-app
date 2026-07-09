@@ -4,45 +4,39 @@
 // 他の人の更新が自動で反映されるよう、30秒ごと・保存後・タブ復帰時に
 // 一覧データ(/api/projects/board)を読み直す。
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { RefreshCw, Search, X } from "lucide-react";
+import { RefreshCw, Search } from "lucide-react";
 import { updateStageAction } from "@/app/projects/actions";
 import type { ActionResult } from "@/app/actions";
 import { PROJECT_DATA_CHANGED_EVENT, notifyProjectDataChanged } from "@/lib/events";
+import { useAutoReload } from "@/lib/hooks";
 import type { BoardProject } from "@/lib/project-board";
 import { formatDate, formatMonthDay, todayLocalISO } from "@/lib/format";
 import {
-  PROJECT_PHASE_LABELS,
+  PROJECT_PHASES,
   STAGES,
   STATUSES,
+  countByPhase,
+  dateAfterStatusChange,
   stageLabel,
   stageState,
   statusDef,
   type ProjectPhase,
   type StageKey,
 } from "@/lib/project-stages";
+import Dialog from "@/components/Dialog";
 
 const AUTO_REFRESH_MS = 30_000;
 
 /** 案件全体の状態を示す小さなラベル */
 function PhaseChip({ phase }: { phase: ProjectPhase }) {
-  const cls =
-    phase === "done"
-      ? "bg-green-100 text-green-800"
-      : phase === "in_progress"
-        ? "bg-amber-100 text-amber-800"
-        : "bg-slate-100 text-slate-500";
+  const def = PROJECT_PHASES.find((p) => p.key === phase) ?? PROJECT_PHASES[0];
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${cls}`}>
-      {PROJECT_PHASE_LABELS[phase]}
+    <span
+      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${def.chipClass}`}
+    >
+      {def.label}
     </span>
   );
 }
@@ -68,13 +62,7 @@ function StageEditDialog({
 
   const pickStatus = (next: (typeof STATUSES)[number]["key"]) => {
     setStatus(next);
-    if ((next === "in_progress" || next === "done") && date === "") {
-      // 「進行中」「完了」を選んだとき、日付が空なら今日を自動で入れる(そのまま変更できる)
-      setDate(todayLocalISO());
-    } else if (next === "not_started" || next === "not_applicable") {
-      // 「未着手」「対象外」に戻したら日付は消す
-      setDate("");
-    }
+    setDate(dateAfterStatusChange(next, date, todayLocalISO()));
   };
 
   const save = () => {
@@ -86,11 +74,7 @@ function StageEditDialog({
         date,
         memo,
         // ダイアログを開いた時点の値。他の人が先に変更していたら保存せずに知らせてもらう
-        expected: {
-          status: current.status,
-          date: current.date,
-          memo: current.memo,
-        },
+        expected: current,
       });
       if (result.ok) {
         onSaved();
@@ -103,106 +87,90 @@ function StageEditDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="stage-edit-dialog-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !pending) onClose();
-      }}
-    >
-      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h3 id="stage-edit-dialog-title" className="text-base font-bold">
-              {stageLabel(stageKey)}
-            </h3>
-            <p className="mt-0.5 break-words text-xs text-slate-500">
-              {project.projectName}
-              {project.clientName ? `(${project.clientName})` : ""}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={pending}
-            aria-label="閉じる"
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100"
-          >
-            <X className="h-5 w-5" aria-hidden />
-          </button>
-        </div>
-
-        <fieldset className="mt-4">
-          <legend className="text-sm font-medium text-slate-700">状態</legend>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {STATUSES.map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => pickStatus(s.key)}
-                aria-pressed={status === s.key}
-                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
-                  status === s.key
-                    ? "border-blue-600 bg-blue-50 font-medium text-blue-900"
-                    : "border-slate-300 text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <span className={`h-3 w-3 shrink-0 rounded-full ${s.dotClass}`} aria-hidden />
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <label className="mt-4 block text-sm font-medium text-slate-700">
-          日付(完了日・着手日など)
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </label>
-
-        <label className="mt-3 block text-sm font-medium text-slate-700">
-          メモ(任意)
-          <textarea
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            rows={2}
-            placeholder="例: 成果品の修正待ち"
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </label>
-
-        {error && (
-          <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
+    <Dialog
+      titleId="stage-edit-dialog-title"
+      pending={pending}
+      onClose={onClose}
+      header={
+        <div className="min-w-0">
+          <h3 id="stage-edit-dialog-title" className="text-base font-bold">
+            {stageLabel(stageKey)}
+          </h3>
+          <p className="mt-0.5 break-words text-xs text-slate-500">
+            {project.projectName}
+            {project.clientName ? `(${project.clientName})` : ""}
           </p>
-        )}
-
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={pending}
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            キャンセル
-          </button>
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending}
-            className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
-          >
-            {pending ? "保存中…" : "保存"}
-          </button>
         </div>
+      }
+    >
+      <fieldset className="mt-4">
+        <legend className="text-sm font-medium text-slate-700">状態</legend>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {STATUSES.map((s) => (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => pickStatus(s.key)}
+              aria-pressed={status === s.key}
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                status === s.key
+                  ? "border-blue-600 bg-blue-50 font-medium text-blue-900"
+                  : "border-slate-300 text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              <span className={`h-3 w-3 shrink-0 rounded-full ${s.dotClass}`} aria-hidden />
+              {s.label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
+      <label className="mt-4 block text-sm font-medium text-slate-700">
+        日付(完了日・着手日など)
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+        />
+      </label>
+
+      <label className="mt-3 block text-sm font-medium text-slate-700">
+        メモ(任意)
+        <textarea
+          value={memo}
+          onChange={(e) => setMemo(e.target.value)}
+          rows={2}
+          placeholder="例: 成果品の修正待ち"
+          className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+        />
+      </label>
+
+      {error && (
+        <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
+      <div className="mt-5 flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={pending}
+          className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          キャンセル
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={pending}
+          className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
+        >
+          {pending ? "保存中…" : "保存"}
+        </button>
       </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -228,16 +196,20 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
   // 一覧データを読み直す。画面の再描画をNext.jsのルーターに頼らず、
   // APIから直接取得する(確実に反映されるように)。
   // 後から始めた読み込みを優先し、遅れて届いた古い応答は捨てる(保存直後の巻き戻り防止)。
+  // 内容が前回と同じなら再描画もしない。
   const loadSeq = useRef(0);
+  const lastBody = useRef<string | null>(null);
   const load = useCallback(async () => {
     const seq = ++loadSeq.current;
     try {
       const res = await fetch("/api/projects/board", { cache: "no-store" });
       if (!res.ok) throw new Error(`status ${res.status}`);
-      const data: { projects: BoardProject[] } = await res.json();
+      const body = await res.text();
       if (seq !== loadSeq.current) return;
-      setProjects(data.projects);
       setLoadError(false);
+      if (body === lastBody.current) return;
+      lastBody.current = body;
+      setProjects((JSON.parse(body) as { projects: BoardProject[] }).projects);
     } catch {
       if (seq !== loadSeq.current) return;
       setLoadError(true); // 直前のデータは残したまま、注意書きだけ出す
@@ -251,26 +223,9 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
   };
 
   // 他の人の更新を自動で反映する(30秒ごと+タブ復帰時+この画面での保存後)
-  useEffect(() => {
-    const refresh = () => {
-      if (document.visibilityState !== "visible") return;
-      load();
-    };
-    const timer = setInterval(refresh, AUTO_REFRESH_MS);
-    window.addEventListener("focus", refresh);
-    window.addEventListener(PROJECT_DATA_CHANGED_EVENT, refresh);
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener(PROJECT_DATA_CHANGED_EVENT, refresh);
-    };
-  }, [load]);
+  useAutoReload(load, { intervalMs: AUTO_REFRESH_MS, eventName: PROJECT_DATA_CHANGED_EVENT });
 
-  const counts = useMemo(() => {
-    const c = { all: projects.length, not_started: 0, in_progress: 0, done: 0 };
-    for (const p of projects) c[p.phase] += 1;
-    return c;
-  }, [projects]);
+  const counts = useMemo(() => countByPhase(projects), [projects]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -318,10 +273,8 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
           />
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          {phaseButton("all", "すべて", counts.all)}
-          {phaseButton("not_started", "未着手", counts.not_started)}
-          {phaseButton("in_progress", "進行中", counts.in_progress)}
-          {phaseButton("done", "完了", counts.done)}
+          {phaseButton("all", "すべて", projects.length)}
+          {PROJECT_PHASES.map((p) => phaseButton(p.key, p.label, counts[p.key]))}
         </div>
         <button
           type="button"

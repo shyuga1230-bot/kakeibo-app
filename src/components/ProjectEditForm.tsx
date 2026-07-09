@@ -1,11 +1,13 @@
 "use client";
 // 案件詳細ページの基本情報(社名・協力会社・案件名・備考)の編集フォーム。
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState } from "react";
 import { Save } from "lucide-react";
 import { updateProjectAction } from "@/app/projects/actions";
 import type { ActionResult } from "@/app/actions";
 import { notifyProjectDataChanged } from "@/lib/events";
+import { useActionSuccess } from "@/lib/hooks";
+import ActionMessage from "@/components/ActionMessage";
 
 type Props = {
   project: {
@@ -24,12 +26,7 @@ export default function ProjectEditForm({ project }: Props) {
   );
 
   // 保存成功したらヘッダーの集計・更新履歴の表示を読み込み直してもらう
-  const handled = useRef<ActionResult | null>(null);
-  useEffect(() => {
-    if (!state || handled.current === state) return;
-    handled.current = state;
-    if (state.ok) notifyProjectDataChanged();
-  }, [state]);
+  useActionSuccess(state, notifyProjectDataChanged);
 
   return (
     <form action={formAction} className="space-y-3">
@@ -73,16 +70,7 @@ export default function ProjectEditForm({ project }: Props) {
         </label>
       </div>
 
-      {state && !state.ok && (
-        <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-          {state.error}
-        </p>
-      )}
-      {state && state.ok && (
-        <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-          ✓ {state.message}
-        </p>
-      )}
+      <ActionMessage result={state} />
 
       <div className="flex justify-end">
         <button

@@ -9,14 +9,17 @@ import {
   STAGES,
   isStageKey,
   isStageStatus,
+  sameStageState,
   stageLabel,
   stageState,
   type StageKey,
+  type StageState,
 } from "@/lib/project-stages";
 import {
   createProject,
   deleteProject,
   getProject,
+  projectExists,
   updateProject,
   updateStages,
   upsertStage,
@@ -32,6 +35,11 @@ const NOT_LOGGED_IN: ActionResult = {
 
 const SAVE_FAILED =
   "保存に失敗しました。少し待ってからもう一度お試しください。繰り返し失敗する場合は管理者に連絡してください。";
+
+const ALREADY_DELETED: ActionResult = {
+  ok: false,
+  error: "この案件はすでに削除されています。一覧を再読み込みしてください。",
+};
 
 // ---------------------------------------------------------------------------
 // 案件の登録・編集・削除
@@ -106,13 +114,7 @@ export async function updateProjectAction(
   if (!validated.ok) return validated;
 
   try {
-    const existing = await getProject(projectId);
-    if (!existing) {
-      return {
-        ok: false,
-        error: "この案件はすでに削除されています。一覧を再読み込みしてください。",
-      };
-    }
+    if (!(await projectExists(projectId))) return ALREADY_DELETED;
     await updateProject(projectId, validated.input);
   } catch (e) {
     console.error("updateProjectAction failed:", e);
@@ -127,13 +129,7 @@ export async function deleteProjectAction(projectId: number): Promise<ActionResu
     return { ok: false, error: "削除対象の案件が見つかりません。" };
   }
   try {
-    const existing = await getProject(projectId);
-    if (!existing) {
-      return {
-        ok: false,
-        error: "この案件はすでに削除されています。一覧を再読み込みしてください。",
-      };
-    }
+    if (!(await projectExists(projectId))) return ALREADY_DELETED;
     await deleteProject(projectId);
   } catch (e) {
     console.error("deleteProjectAction failed:", e);
@@ -184,7 +180,7 @@ export type StageUpdatePayload = {
   date: string;
   memo: string;
   /** ダイアログを開いた時点の値。他の人が先に変更していたら保存せずに知らせる */
-  expected?: {
+  expected: {
     status: string;
     date: string | null;
     memo: string | null;
@@ -214,21 +210,17 @@ export async function updateStageAction(
 
   try {
     const existing = await getProject(projectId);
-    if (!existing) {
-      return {
-        ok: false,
-        error: "この案件はすでに削除されています。一覧を再読み込みしてください。",
-      };
-    }
+    if (!existing) return ALREADY_DELETED;
     // ダイアログを開いてから保存するまでの間に、他の人が同じマスを変更していないか確認する
+    // (フォームを介さない直接呼び出しに備えて、実行時にも形を確認する)
     const expected = payload.expected;
-    if (expected && typeof expected === "object") {
-      const current = stageState(existing.stages, stageKeyRaw);
-      const changedByOthers =
-        current.status !== String(expected.status ?? "") ||
-        (current.date ?? null) !== (expected.date ?? null) ||
-        (current.memo ?? null) !== (expected.memo ?? null);
-      if (changedByOthers) {
+    if (expected && typeof expected === "object" && isStageStatus(String(expected.status))) {
+      const expectedState: StageState = {
+        status: expected.status as StageState["status"],
+        date: expected.date ?? null,
+        memo: expected.memo ?? null,
+      };
+      if (!sameStageState(stageState(existing.stages, stageKeyRaw), expectedState)) {
         return {
           ok: false,
           error:
@@ -286,13 +278,8 @@ export async function updateStagesAction(
 
   try {
     const existing = await getProject(projectId);
-    if (!existing) {
-      return {
-        ok: false,
-        error: "この案件はすでに削除されています。一覧を再読み込みしてください。",
-      };
-    }
-    await updateStages(projectId, inputs);
+    if (!existing) return ALREADY_DELETED;
+    await updateStages(projectId, inputs, existing.stages);
   } catch (e) {
     console.error("updateStagesAction failed:", e);
     return { ok: false, error: SAVE_FAILED };

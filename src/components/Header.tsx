@@ -26,10 +26,27 @@ const NAV = [
   { href: "/projects", label: "案件管理", icon: FolderKanban },
 ];
 
+// 画面の種類ごとの、サマリーとCSVボタンの切り替え設定
+const SECTIONS = [
+  {
+    prefix: "/projects",
+    exportHref: "/api/projects/export",
+    exportTitle: "案件管理表をExcelで開けるCSVファイルとして保存します",
+    SummaryBar: ProjectSummaryBar,
+  },
+] as const;
+
+const DEFAULT_SECTION = {
+  prefix: "",
+  exportHref: "/api/export",
+  exportTitle: "全データをExcelで開けるCSVファイルとして保存します",
+  SummaryBar: SummaryBar,
+} as const;
+
 export default function Header() {
   const pathname = usePathname();
-  // 案件管理の画面では、サマリーとCSVを案件管理用に切り替える
-  const isProjects = pathname.startsWith("/projects");
+  // いまの画面に合わせて、サマリーとCSVボタンを切り替える
+  const section = SECTIONS.find((s) => pathname.startsWith(s.prefix)) ?? DEFAULT_SECTION;
 
   if (pathname === "/login") {
     return (
@@ -54,13 +71,9 @@ export default function Header() {
           </div>
           <div className="flex items-center gap-1 text-xs">
             <a
-              href={isProjects ? "/api/projects/export" : "/api/export"}
+              href={section.exportHref}
               className="flex items-center gap-1 rounded-md px-2 py-1.5 text-blue-100 hover:bg-white/10 hover:text-white"
-              title={
-                isProjects
-                  ? "案件管理表をExcelで開けるCSVファイルとして保存します"
-                  : "全データをExcelで開けるCSVファイルとして保存します"
-              }
+              title={section.exportTitle}
             >
               <Download className="h-4 w-4" aria-hidden />
               <span className="hidden sm:inline">CSVを保存</span>
@@ -79,7 +92,7 @@ export default function Header() {
         </div>
 
         <div className="mt-2">
-          {isProjects ? <ProjectSummaryBar /> : <SummaryBar />}
+          <section.SummaryBar />
         </div>
 
         <nav className="mt-2 flex gap-1" aria-label="画面の切り替え">

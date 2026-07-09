@@ -5,16 +5,19 @@ import { getPrisma } from "@/lib/db";
 import {
   STAGES,
   computeProgress,
+  countByPhase,
   currentStageKey,
+  isStageKey,
   isStageStatus,
   projectPhase,
+  sameStageState,
   stageLabel,
   stageState,
   statusDef,
   type ProjectPhase,
   type StageKey,
+  type StageState,
   type StageStateMap,
-  type StageStatus,
 } from "@/lib/project-stages";
 
 export type ProjectInput = {
@@ -24,11 +27,8 @@ export type ProjectInput = {
   memo: string | null;
 };
 
-export type StageInput = {
-  status: StageStatus;
-  date: string | null; // "YYYY-MM-DD"
-  memo: string | null;
-};
+/** 工程1マス分の保存内容(状態・日付・メモ) */
+export type StageInput = StageState;
 
 export type ProjectWithStages = {
   id: number;
@@ -58,9 +58,9 @@ type StageRow = {
 function toStageMap(rows: StageRow[]): StageStateMap {
   const map: StageStateMap = {};
   for (const row of rows) {
-    const stage = STAGES.find((s) => s.key === row.stageKey);
-    if (!stage) continue; // 定義から外れた工程キーは無視(将来の変更に備える)
-    map[stage.key] = {
+    // 定義から外れた工程キー・状態は無視(将来の変更に備える)
+    if (!isStageKey(row.stageKey)) continue;
+    map[row.stageKey] = {
       status: isStageStatus(row.status) ? row.status : "not_started",
       date: row.date,
       memo: row.memo,
@@ -99,10 +99,10 @@ const stageSelect = {
   select: { stageKey: true, status: true, date: true, memo: true },
 } as const;
 
-/** 一覧表・ダッシュボード用: 全案件(新しい順) */
-export async function listProjects(): Promise<ProjectWithStages[]> {
+/** 一覧表・ダッシュボード用は新しい順、CSV出力用は登録の古い順で全案件を読む */
+export async function listProjects(order: "asc" | "desc" = "desc"): Promise<ProjectWithStages[]> {
   const projects = await getPrisma().project.findMany({
-    orderBy: { id: "desc" },
+    orderBy: { id: order },
     include: { stages: stageSelect },
   });
   return projects.map(decorate);
@@ -114,6 +114,15 @@ export async function getProject(id: number): Promise<ProjectWithStages | null> 
     include: { stages: stageSelect },
   });
   return project ? decorate(project) : null;
+}
+
+/** 存在チェックだけ(編集・削除の前の確認用。工程まで読む必要がないとき) */
+export async function projectExists(id: number): Promise<boolean> {
+  const project = await getPrisma().project.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+  return project !== null;
 }
 
 export async function createProject(input: ProjectInput): Promise<number> {
@@ -147,17 +156,20 @@ export async function deleteProject(id: number): Promise<void> {
   await getPrisma().project.delete({ where: { id } });
 }
 
+/** 更新履歴に残す文言(セルからの変更と、まとめて保存で共通) */
+function stageChangeMessage(label: string, input: StageInput): string {
+  const statusLabel = statusDef(input.status).label;
+  return input.date
+    ? `「${label}」を「${statusLabel}」に変更しました(日付: ${input.date})`
+    : `「${label}」を「${statusLabel}」に変更しました`;
+}
+
 /** 工程1マスの状態を変更する(行が無ければ作る)。変更内容は履歴に残す。 */
 export async function upsertStage(
   projectId: number,
   stageKey: StageKey,
   input: StageInput,
 ): Promise<void> {
-  const label = stageLabel(stageKey);
-  const statusLabel = statusDef(input.status).label;
-  const action = input.date
-    ? `「${label}」を「${statusLabel}」に変更しました(日付: ${input.date})`
-    : `「${label}」を「${statusLabel}」に変更しました`;
   await getPrisma().$transaction([
     getPrisma().projectStage.upsert({
       where: { projectId_stageKey: { projectId, stageKey } },
@@ -167,33 +179,30 @@ export async function upsertStage(
     // 案件の「最終更新」も動かす(CSVの「最終更新日」列に反映される)
     getPrisma().project.update({
       where: { id: projectId },
-      data: { updatedAt: new Date(), logs: { create: { action } } },
+      data: {
+        updatedAt: new Date(),
+        logs: { create: { action: stageChangeMessage(stageLabel(stageKey), input) } },
+      },
     }),
   ]);
 }
 
-/** 詳細ページ用: 13工程まとめて保存(変わった工程だけ履歴に残す) */
+/**
+ * 詳細ページ用: 複数工程をまとめて保存する(変わった工程だけ書き込み、履歴に残す)。
+ * current には保存前の状態(呼び出し側が取得済みのもの)を渡す。
+ */
 export async function updateStages(
   projectId: number,
   inputs: Partial<Record<StageKey, StageInput>>,
+  current: StageStateMap,
 ): Promise<void> {
-  const existing = await getPrisma().projectStage.findMany({
-    where: { projectId },
-    select: { stageKey: true, status: true, date: true, memo: true },
-  });
-  const current = toStageMap(existing);
-
   const ops = [];
   const changedActions: string[] = [];
   for (const stage of STAGES) {
     const input = inputs[stage.key];
     if (!input) continue;
     const before = stageState(current, stage.key);
-    const changed =
-      before.status !== input.status ||
-      (before.date ?? null) !== (input.date ?? null) ||
-      (before.memo ?? null) !== (input.memo ?? null);
-    if (!changed) continue;
+    if (sameStageState(before, input)) continue;
     ops.push(
       getPrisma().projectStage.upsert({
         where: { projectId_stageKey: { projectId, stageKey: stage.key } },
@@ -202,11 +211,7 @@ export async function updateStages(
       }),
     );
     if (before.status !== input.status || (before.date ?? null) !== (input.date ?? null)) {
-      changedActions.push(
-        input.date
-          ? `「${stage.label}」を「${statusDef(input.status).label}」に変更しました(日付: ${input.date})`
-          : `「${stage.label}」を「${statusDef(input.status).label}」に変更しました`,
-      );
+      changedActions.push(stageChangeMessage(stage.label, input));
     } else {
       changedActions.push(`「${stage.label}」のメモを変更しました`);
     }
@@ -243,23 +248,20 @@ export type ProjectSummary = {
   done: number;
 };
 
-/** ヘッダーのサマリー用: 案件数を状態別に数える */
+/** ヘッダーのサマリー用: 案件数を状態別に数える(必要な列だけ読む軽い集計) */
 export async function getProjectSummary(): Promise<ProjectSummary> {
-  const projects = await listProjects();
-  const summary: ProjectSummary = { total: projects.length, notStarted: 0, inProgress: 0, done: 0 };
-  for (const p of projects) {
-    if (p.phase === "done") summary.done += 1;
-    else if (p.phase === "in_progress") summary.inProgress += 1;
-    else summary.notStarted += 1;
-  }
-  return summary;
-}
-
-/** CSVエクスポート用: 全案件(登録の古い順) */
-export async function loadAllProjectsForExport(): Promise<ProjectWithStages[]> {
   const projects = await getPrisma().project.findMany({
-    orderBy: { id: "asc" },
-    include: { stages: stageSelect },
+    select: { stages: { select: { stageKey: true, status: true } } },
   });
-  return projects.map(decorate);
+  const counts = countByPhase(
+    projects.map((p) => ({
+      phase: projectPhase(toStageMap(p.stages.map((s) => ({ ...s, date: null, memo: null })))),
+    })),
+  );
+  return {
+    total: projects.length,
+    notStarted: counts.not_started,
+    inProgress: counts.in_progress,
+    done: counts.done,
+  };
 }

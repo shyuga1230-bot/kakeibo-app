@@ -5,19 +5,10 @@ import {
   STAGES,
   stageState,
   statusDef,
-  type ProjectPhase,
-  type StageStateMap,
 } from "@/lib/project-stages";
+import type { BoardProject } from "@/lib/project-board";
 
-export type ProjectCsvSource = {
-  id: number;
-  partnerName: string | null;
-  clientName: string | null;
-  projectName: string;
-  memo: string | null;
-  phase: ProjectPhase;
-  progress: { done: number; applicable: number; percent: number };
-  stages: StageStateMap;
+export type ProjectCsvSource = BoardProject & {
   /** "YYYY-MM-DD" 形式(日本時間) */
   createdAt: string;
   updatedAt: string;

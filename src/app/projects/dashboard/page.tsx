@@ -8,7 +8,9 @@ import { listProjects, type ProjectWithStages } from "@/lib/projects";
 import {
   STAGES,
   STATUSES,
+  countByPhase,
   stageState,
+  type StageKey,
   type StageStatus,
 } from "@/lib/project-stages";
 import ProjectsTabs from "@/components/ProjectsTabs";
@@ -128,8 +130,7 @@ export default async function ProjectsDashboardPage() {
   }
 
   // 件数サマリー
-  const phaseCounts = { not_started: 0, in_progress: 0, done: 0 };
-  for (const p of projects) phaseCounts[p.phase] += 1;
+  const phaseCounts = countByPhase(projects);
 
   // 工程ごとの状態別件数(積み上げバー用)
   const stageCounts = STAGES.map((stage) => {
@@ -144,9 +145,14 @@ export default async function ProjectsDashboardPage() {
   });
 
   // 「いま止まっている工程」= 未完了の案件が現在どの工程にいるか
+  const bottleneckMap = new Map<StageKey, number>();
+  for (const p of projects) {
+    if (p.phase === "done" || !p.currentStage) continue;
+    bottleneckMap.set(p.currentStage, (bottleneckMap.get(p.currentStage) ?? 0) + 1);
+  }
   const bottleneckCounts = STAGES.map((stage) => ({
     stage,
-    count: projects.filter((p) => p.phase !== "done" && p.currentStage === stage.key).length,
+    count: bottleneckMap.get(stage.key) ?? 0,
   }));
   const maxBottleneck = Math.max(1, ...bottleneckCounts.map((b) => b.count));
 

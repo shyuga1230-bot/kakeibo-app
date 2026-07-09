@@ -17,11 +17,10 @@ export async function GET(
     return NextResponse.json({ error: "案件が見つかりません" }, { status: 404 });
   }
   try {
-    const project = await getProject(projectId);
+    const [project, logs] = await Promise.all([getProject(projectId), listLogs(projectId)]);
     if (!project) {
       return NextResponse.json({ error: "案件が見つかりません" }, { status: 404 });
     }
-    const logs = await listLogs(projectId);
     return NextResponse.json(
       {
         phase: project.phase,

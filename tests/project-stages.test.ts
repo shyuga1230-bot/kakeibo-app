@@ -5,10 +5,13 @@ import {
   STAGES,
   STATUSES,
   computeProgress,
+  countByPhase,
   currentStageKey,
+  dateAfterStatusChange,
   isStageKey,
   isStageStatus,
   projectPhase,
+  sameStageState,
   stageState,
   type StageStateMap,
 } from "../src/lib/project-stages";
@@ -92,6 +95,37 @@ test("currentStageKey: 全部完了(または対象外)なら null", () => {
   for (const s of STAGES) map[s.key] = state("done", "2026-07-01");
   map.government_estimate = state("not_applicable");
   assert.equal(currentStageKey(map), null);
+});
+
+test("sameStageState: 状態・日付・メモがすべて同じときだけ true", () => {
+  const a = state("done", "2026-07-01");
+  assert.ok(sameStageState(a, { status: "done", date: "2026-07-01", memo: null }));
+  assert.ok(!sameStageState(a, { status: "in_progress", date: "2026-07-01", memo: null }));
+  assert.ok(!sameStageState(a, { status: "done", date: "2026-07-02", memo: null }));
+  assert.ok(!sameStageState(a, { status: "done", date: "2026-07-01", memo: "メモ" }));
+});
+
+test("dateAfterStatusChange: 進行中・完了で今日を自動入力、未着手・対象外で日付を消す", () => {
+  const today = "2026-07-09";
+  // 日付が空なら今日が入る
+  assert.equal(dateAfterStatusChange("in_progress", "", today), today);
+  assert.equal(dateAfterStatusChange("done", "", today), today);
+  // すでに日付があれば変えない
+  assert.equal(dateAfterStatusChange("done", "2026-06-01", today), "2026-06-01");
+  // 未着手・対象外に戻すと消える
+  assert.equal(dateAfterStatusChange("not_started", "2026-06-01", today), "");
+  assert.equal(dateAfterStatusChange("not_applicable", "2026-06-01", today), "");
+});
+
+test("countByPhase: 状態別の件数を数える", () => {
+  const counts = countByPhase([
+    { phase: "done" },
+    { phase: "in_progress" },
+    { phase: "in_progress" },
+    { phase: "not_started" },
+  ]);
+  assert.deepEqual(counts, { not_started: 1, in_progress: 2, done: 1 });
+  assert.deepEqual(countByPhase([]), { not_started: 0, in_progress: 0, done: 0 });
 });
 
 test("projectPhase: 未着手 → 進行中 → 完了 の判定", () => {

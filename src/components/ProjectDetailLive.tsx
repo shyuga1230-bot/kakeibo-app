@@ -3,32 +3,19 @@
 // API(/api/projects/[id])から読み直す(一覧表と同じ、確実に反映される方式)。
 // 編集フォームの入力内容は読み直しの影響を受けない。
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PROJECT_DATA_CHANGED_EVENT } from "@/lib/events";
+import { useAutoReload } from "@/lib/hooks";
 import { formatDateTimeJst } from "@/lib/format";
-import {
-  PROJECT_PHASE_LABELS,
-  type ProjectPhase,
-  type StageStateMap,
-} from "@/lib/project-stages";
+import type { BoardProject } from "@/lib/project-board";
+import { PROJECT_PHASE_LABELS, type ProjectPhase } from "@/lib/project-stages";
 import ProjectEditForm from "@/components/ProjectEditForm";
 import ProjectStageEditor from "@/components/ProjectStageEditor";
 import DeleteProjectButton from "@/components/DeleteProjectButton";
 
 const AUTO_REFRESH_MS = 30_000;
-
-export type ProjectDetailData = {
-  id: number;
-  clientName: string | null;
-  partnerName: string | null;
-  projectName: string;
-  memo: string | null;
-  phase: ProjectPhase;
-  progress: { done: number; applicable: number; percent: number };
-  stages: StageStateMap;
-};
 
 export type ProjectLogItem = { id: number; action: string; at: string };
 
@@ -42,7 +29,7 @@ export default function ProjectDetailLive({
   project,
   initialLogs,
 }: {
-  project: ProjectDetailData;
+  project: BoardProject;
   initialLogs: ProjectLogItem[];
 }) {
   const [live, setLive] = useState<Live>({
@@ -66,20 +53,8 @@ export default function ProjectDetailLive({
     }
   }, [project.id]);
 
-  useEffect(() => {
-    const refresh = () => {
-      if (document.visibilityState !== "visible") return;
-      load();
-    };
-    const timer = setInterval(refresh, AUTO_REFRESH_MS);
-    window.addEventListener("focus", refresh);
-    window.addEventListener(PROJECT_DATA_CHANGED_EVENT, refresh);
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener(PROJECT_DATA_CHANGED_EVENT, refresh);
-    };
-  }, [load]);
+  // 30秒ごと・タブ復帰時・この画面での保存後に状態と履歴を読み直す
+  useAutoReload(load, { intervalMs: AUTO_REFRESH_MS, eventName: PROJECT_DATA_CHANGED_EVENT });
 
   const description = `「${project.projectName}」${
     project.clientName ? `(${project.clientName})` : ""

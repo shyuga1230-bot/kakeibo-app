@@ -2,7 +2,8 @@
 // 1案件 = 1行(工程ごとに「状態」「日付」の2列)。
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { loadAllProjectsForExport } from "@/lib/projects";
+import { listProjects } from "@/lib/projects";
+import { toBoardProject } from "@/lib/project-board";
 import { buildProjectCsvRows } from "@/lib/project-csv";
 import { buildCsv } from "@/lib/csv";
 import { toJstDateString } from "@/lib/format";
@@ -12,17 +13,11 @@ export async function GET() {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
   }
   try {
-    const projects = await loadAllProjectsForExport();
+    // CSVは登録の古い順(Excelの管理表と同じ、上から追記した並び)
+    const projects = await listProjects("asc");
     const rows = buildProjectCsvRows(
       projects.map((p) => ({
-        id: p.id,
-        partnerName: p.partnerName,
-        clientName: p.clientName,
-        projectName: p.projectName,
-        memo: p.memo,
-        phase: p.phase,
-        progress: p.progress,
-        stages: p.stages,
+        ...toBoardProject(p),
         createdAt: toJstDateString(p.createdAt),
         updatedAt: toJstDateString(p.updatedAt),
       })),

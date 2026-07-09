@@ -3,6 +3,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getProject, listLogs } from "@/lib/projects";
+import { toBoardProject } from "@/lib/project-board";
 import ProjectDetailLive from "@/components/ProjectDetailLive";
 
 export const metadata = { title: "案件の詳細 | 見積もり併売データベース" };
@@ -18,23 +19,12 @@ export default async function ProjectDetailPage({
   const projectId = Number.parseInt(id, 10);
   if (!Number.isInteger(projectId) || projectId <= 0) notFound();
 
-  const project = await getProject(projectId);
+  const [project, logs] = await Promise.all([getProject(projectId), listLogs(projectId)]);
   if (!project) notFound();
-
-  const logs = await listLogs(projectId);
 
   return (
     <ProjectDetailLive
-      project={{
-        id: project.id,
-        clientName: project.clientName,
-        partnerName: project.partnerName,
-        projectName: project.projectName,
-        memo: project.memo,
-        phase: project.phase,
-        progress: project.progress,
-        stages: project.stages,
-      }}
+      project={toBoardProject(project)}
       initialLogs={logs.map((l) => ({
         id: l.id,
         action: l.action,
