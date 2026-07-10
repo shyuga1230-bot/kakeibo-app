@@ -84,14 +84,53 @@ export default async function AnalysisPage({
         </p>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 lg:col-span-1">
-          <h2 className="text-base font-bold">1. 基準となる項目を選ぶ</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            「この項目が売れた案件では、他に何が売れているか?」の
-            「この項目」を選びます(登場件数の多い順)。
+      {/* 主役: 何と何がセットで売れているか(このページにしかない情報) */}
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
+        <h2 className="text-lg font-bold">定番の組み合わせ TOP10</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          2回以上一緒に売れたペアを、回数の多い順に表示しています。
+          項目名を押すと、下でその項目を詳しく見られます。
+        </p>
+        {data.pairs.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">
+            2回以上一緒に登場したペアはまだありません。データがたまると表示されます。
           </p>
-          <div className="mt-3">
+        ) : (
+          <table className="mt-3 w-full text-sm">
+            <thead className="text-left text-xs text-slate-500">
+              <tr>
+                <th className="py-1 pr-2 font-medium">組み合わせ</th>
+                <th className="w-20 py-1 text-right font-medium">回数</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.pairs.map((p) => (
+                <tr key={`${p.itemA}|${p.itemB}`} className="border-t border-slate-100">
+                  <td className="py-1.5 pr-2">
+                    <Link href={itemLink(p.itemA)} className="text-blue-700 hover:underline">
+                      {p.itemA}
+                    </Link>
+                    <span className="mx-1 text-slate-400">×</span>
+                    <Link href={itemLink(p.itemB)} className="text-blue-700 hover:underline">
+                      {p.itemB}
+                    </Link>
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums">{formatYen(p.count)}回</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {/* 深掘り: 項目を選ぶと、一緒に売れているものが併売率つきで出る */}
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
+        <h2 className="text-lg font-bold">項目を選んで詳しく見る</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          項目を選ぶと「その項目が売れた案件で、他に何が売れているか」が割合つきでわかります。
+        </p>
+        <div className="mt-4 grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-1">
             <ItemPicker
               items={data.itemStats.map((s) => ({
                 itemName: s.itemName,
@@ -100,13 +139,11 @@ export default async function AnalysisPage({
               selected={co ? co.base : null}
             />
           </div>
-        </section>
 
-        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 lg:col-span-2">
-          <h2 className="text-base font-bold">2. 一緒に売れている項目</h2>
+          <div className="lg:col-span-2">
           {!co ? (
             <p className="mt-6 text-center text-sm text-slate-500">
-              左のリストから基準となる項目を選んでください。
+              左のリストから項目を選んでください。
             </p>
           ) : co.N === 0 ? (
             <p className="mt-6 text-center text-sm text-slate-500">
@@ -146,81 +183,9 @@ export default async function AnalysisPage({
               )}
             </>
           )}
-        </section>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
-          <h2 className="text-base font-bold">定番の組み合わせ TOP10</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            2回以上一緒に登場したペアを、回数の多い順に表示しています。
-          </p>
-          {data.pairs.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">
-              2回以上一緒に登場したペアはまだありません。
-            </p>
-          ) : (
-            <table className="mt-3 w-full text-sm">
-              <thead className="text-left text-xs text-slate-500">
-                <tr>
-                  <th className="py-1 pr-2 font-medium">組み合わせ</th>
-                  <th className="w-20 py-1 text-right font-medium">回数</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.pairs.map((p) => (
-                  <tr key={`${p.itemA}|${p.itemB}`} className="border-t border-slate-100">
-                    <td className="py-1.5 pr-2">
-                      <Link href={itemLink(p.itemA)} className="text-blue-700 hover:underline">
-                        {p.itemA}
-                      </Link>
-                      <span className="mx-1 text-slate-400">×</span>
-                      <Link href={itemLink(p.itemB)} className="text-blue-700 hover:underline">
-                        {p.itemB}
-                      </Link>
-                    </td>
-                    <td className="py-1.5 text-right tabular-nums">{formatYen(p.count)}回</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-
-        <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
-          <h2 className="text-base font-bold">売れ筋ランキング TOP10</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            登場した案件数の多い順(同数の場合は金額合計の多い順)。
-            項目名を押すと、その項目を基準にした併売分析に切り替わります。
-          </p>
-          <table className="mt-3 w-full text-sm">
-            <thead className="text-left text-xs text-slate-500">
-              <tr>
-                <th className="w-10 py-1 font-medium">順位</th>
-                <th className="py-1 pr-2 font-medium">項目名</th>
-                <th className="w-16 py-1 text-right font-medium">件数</th>
-                <th className="w-28 py-1 text-right font-medium">金額合計</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.itemStats.slice(0, 10).map((s, i) => (
-                <tr key={s.itemName} className="border-t border-slate-100">
-                  <td className="py-1.5 tabular-nums text-slate-500">{i + 1}</td>
-                  <td className="min-w-0 break-all py-1.5 pr-2">
-                    <Link href={itemLink(s.itemName)} className="text-blue-700 hover:underline">
-                      {s.itemName}
-                    </Link>
-                  </td>
-                  <td className="py-1.5 text-right tabular-nums">{formatYen(s.caseCount)}件</td>
-                  <td className="py-1.5 text-right tabular-nums">
-                    {s.amountSum > 0 ? `¥${formatYen(s.amountSum)}` : "-"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
