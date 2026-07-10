@@ -88,6 +88,56 @@ export async function importMasterItemsFromHistory(): Promise<number> {
 }
 
 /**
+ * 商品の統合(名寄せ)。fromName の商品を toName にまとめる。
+ * 過去の見積もりの明細の項目名もまとめて書き換える。
+ * 同じ見積もりに両方が入っている場合は、金額を合算して1行にする。
+ * 書き換えた明細の数を返す。
+ */
+export async function mergeItems(fromName: string, toName: string): Promise<number> {
+  const prisma = getPrisma();
+  return await prisma.$transaction(async (tx) => {
+    // 1) 同じ見積もりに from と to の両方があるものを探す(ごみ箱の中も含めて揃える)
+    const fromRows = await tx.quoteItem.findMany({
+      where: { itemName: fromName },
+      select: { id: true, quoteId: true, amount: true },
+    });
+    const toRows = await tx.quoteItem.findMany({
+      where: {
+        itemName: toName,
+        quoteId: { in: fromRows.map((r) => r.quoteId) },
+      },
+      select: { id: true, quoteId: true, amount: true },
+    });
+    const toByQuote = new Map(toRows.map((r) => [r.quoteId, r]));
+
+    let changed = 0;
+    for (const from of fromRows) {
+      const to = toByQuote.get(from.quoteId);
+      if (to) {
+        // 両方ある見積もり: 金額を合算して to に寄せ、from の行は消す
+        const amount =
+          from.amount == null && to.amount == null
+            ? null
+            : (from.amount ?? 0) + (to.amount ?? 0);
+        await tx.quoteItem.update({ where: { id: to.id }, data: { amount } });
+        await tx.quoteItem.delete({ where: { id: from.id } });
+      } else {
+        // from だけの見積もり: 項目名を書き換える
+        await tx.quoteItem.update({
+          where: { id: from.id },
+          data: { itemName: toName },
+        });
+      }
+      changed += 1;
+    }
+
+    // 2) 商品マスタから from を消す(to は残す)
+    await tx.item.deleteMany({ where: { name: fromName } });
+    return changed;
+  });
+}
+
+/**
  * 見積もりに登録された項目のうち、マスタに無いものを自動で追加する。
  * そのとき入力された金額を標準金額として覚えるので、
  * 次回からはプルダウンで選ぶだけで金額まで入る。

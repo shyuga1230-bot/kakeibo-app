@@ -140,12 +140,13 @@ export default function Header({ userName }: { userName?: string | null }) {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-1.5">
           <section.SummaryBar />
           {userName && (
-            <span
-              className="hidden max-w-32 shrink-0 truncate text-xs text-slate-400 sm:inline"
-              title="ログイン時に入力した名前。変更するにはログインし直してください"
+            <Link
+              href="/members"
+              className="hidden max-w-32 shrink-0 truncate text-xs text-slate-400 hover:text-slate-700 hover:underline sm:inline"
+              title="ログイン中の名前。押すと社員名簿を開きます"
             >
               {userName}さん
-            </span>
+            </Link>
           )}
         </div>
       </div>
