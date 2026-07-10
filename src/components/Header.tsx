@@ -113,14 +113,6 @@ export default function Header({ userName }: { userName?: string | null }) {
             })}
           </nav>
           <div className="ml-auto flex items-center gap-1 py-2 text-xs">
-            {userName && (
-              <span
-                className="hidden max-w-32 truncate px-1 text-slate-400 lg:inline"
-                title="ログイン時に入力した名前。変更するにはログインし直してください"
-              >
-                {userName}さん
-              </span>
-            )}
             <a
               href={section.exportHref}
               className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
@@ -143,10 +135,18 @@ export default function Header({ userName }: { userName?: string | null }) {
         </div>
       </div>
 
-      {/* 2行目: サマリー(見積 or 案件の集計)を1行のストリップで表示 */}
+      {/* 2行目: サマリー(見積 or 案件の集計)と、ログイン中の名前 */}
       <div className="border-t border-slate-100 bg-slate-50/70">
-        <div className="mx-auto max-w-5xl px-4 py-1.5">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-1.5">
           <section.SummaryBar />
+          {userName && (
+            <span
+              className="hidden max-w-32 shrink-0 truncate text-xs text-slate-400 sm:inline"
+              title="ログイン時に入力した名前。変更するにはログインし直してください"
+            >
+              {userName}さん
+            </span>
+          )}
         </div>
       </div>
     </HeaderShell>
