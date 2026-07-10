@@ -44,7 +44,7 @@ export default function ItemPicker({ items, selected }: Props) {
           return (
             <li key={item.itemName}>
               <Link
-                href={`/analysis?item=${encodeURIComponent(item.itemName)}`}
+                href={`/analysis/cosales?item=${encodeURIComponent(item.itemName)}`}
                 className={`flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-sm ${
                   active
                     ? "bg-blue-600 text-white"
