@@ -83,7 +83,7 @@ export default function DeleteQuoteButton({ quoteId, description }: Props) {
               {description}
             </p>
             <p className="mt-3 text-sm font-medium text-red-700">
-              削除すると<b>全員のデータから消えます</b>。この操作は元に戻せません。
+              削除すると<b>全員の画面から消えます</b>。間違えた場合は、履歴の「ごみ箱」から30日以内なら戻せます。
             </p>
 
             {error && (

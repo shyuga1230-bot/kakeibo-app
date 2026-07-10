@@ -71,7 +71,7 @@ export default function DeleteProjectButton({ projectId, description }: Props) {
           </p>
           <p className="mt-3 text-sm font-medium text-red-700">
             工程の進捗・備考・更新履歴もあわせて削除され、<b>全員のデータから消えます</b>
-            。この操作は元に戻せません。
+            。間違えた場合は「ごみ箱」から30日以内なら戻せます。
           </p>
 
           {error && (

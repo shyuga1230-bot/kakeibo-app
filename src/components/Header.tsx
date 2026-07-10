@@ -65,7 +65,7 @@ function Brand() {
   );
 }
 
-export default function Header() {
+export default function Header({ userName }: { userName?: string | null }) {
   const pathname = usePathname();
   // いまの画面に合わせて、サマリーとCSVボタンを切り替える
   const section = SECTIONS.find((s) => pathname.startsWith(s.prefix)) ?? DEFAULT_SECTION;
@@ -113,6 +113,14 @@ export default function Header() {
             })}
           </nav>
           <div className="ml-auto flex items-center gap-1 py-2 text-xs">
+            {userName && (
+              <span
+                className="hidden max-w-32 truncate px-1 text-slate-400 lg:inline"
+                title="ログイン時に入力した名前。変更するにはログインし直してください"
+              >
+                {userName}さん
+              </span>
+            )}
             <a
               href={section.exportHref}
               className="flex items-center gap-1 rounded-md px-2 py-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800"

@@ -34,6 +34,7 @@ import {
   importMasterItemsFromHistory,
   updateMasterItem,
 } from "@/lib/items";
+import { restoreProject, restoreQuote } from "@/lib/trash";
 
 /** 新しい商品を商品マスタへ自動追加(金額も標準金額として保存。失敗しても登録自体は成功扱い) */
 async function addNewNamesToMaster(
@@ -111,6 +112,14 @@ export async function loginAction(
     };
   }
 
+  const name = String(formData.get("user_name") ?? "")
+    .replace(/[\s　]+/g, " ")
+    .trim()
+    .slice(0, 30);
+  if (name === "") {
+    return { ok: false, error: "お名前を入力してください。" };
+  }
+
   const password = String(formData.get("password") ?? "");
   if (password === "" || !safeEquals(password, process.env.APP_PASSWORD ?? "")) {
     const count = (record?.count ?? 0) + 1;
@@ -122,7 +131,7 @@ export async function loginAction(
     return { ok: false, error: "パスワードが違います。もう一度入力してください。" };
   }
   loginFailures.delete(key);
-  await setSessionCookie();
+  await setSessionCookie(name);
   redirect("/");
 }
 
@@ -205,13 +214,14 @@ export async function createQuoteAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  if (!(await getSession())) return NOT_LOGGED_IN;
+  const session = await getSession();
+  if (!session) return NOT_LOGGED_IN;
 
   const validated = validateQuoteForm(formData);
   if (!validated.ok) return validated;
 
   try {
-    await createQuote(validated.input);
+    await createQuote(validated.input, session.name ?? null);
     await addNewNamesToMaster(validated.input.items);
   } catch (e) {
     console.error("createQuoteAction failed:", e);
@@ -295,7 +305,8 @@ export async function bulkImportAction(
   _prev: ImportResult | null,
   formData: FormData,
 ): Promise<ImportResult> {
-  if (!(await getSession())) {
+  const session = await getSession();
+  if (!session) {
     return { ok: false, error: NOT_LOGGED_IN_MESSAGE };
   }
   const text = String(formData.get("bulk_text") ?? "");
@@ -317,12 +328,15 @@ export async function bulkImportAction(
   // 正常な行だけを1行ずつ登録する(エラー行があっても他の行は登録する)
   for (const row of rows) {
     try {
-      await createQuote({
-        quoteDate: row.date,
-        customerName: row.customerName,
-        memo: null,
-        items: row.items,
-      });
+      await createQuote(
+        {
+          quoteDate: row.date,
+          customerName: row.customerName,
+          memo: null,
+          items: row.items,
+        },
+        session.name ?? null,
+      );
       imported += 1;
       importedItems.push(...row.items);
     } catch (e) {
@@ -349,6 +363,51 @@ export async function bulkImportAction(
     .join("\n");
 
   return { ok: true, imported, errors: allErrors, failedText };
+}
+
+// ---------------------------------------------------------------------------
+// ごみ箱(削除した見積もり・案件を戻す)
+// ---------------------------------------------------------------------------
+
+export async function restoreQuoteAction(quoteId: number): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  if (!Number.isInteger(quoteId) || quoteId <= 0) {
+    return { ok: false, error: "対象の見積もりが見つかりません。" };
+  }
+  try {
+    if (!(await restoreQuote(quoteId))) {
+      return {
+        ok: false,
+        error: "この見積もりはすでに完全に削除されています(ごみ箱は30日で空になります)。",
+      };
+    }
+  } catch (e) {
+    console.error("restoreQuoteAction failed:", e);
+    return { ok: false, error: "戻すのに失敗しました。もう一度お試しください。" };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "見積もりを履歴に戻しました。" };
+}
+
+export async function restoreProjectAction(projectId: number): Promise<ActionResult> {
+  const session = await getSession();
+  if (!session) return NOT_LOGGED_IN;
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    return { ok: false, error: "対象の案件が見つかりません。" };
+  }
+  try {
+    if (!(await restoreProject(projectId, session.name ?? null))) {
+      return {
+        ok: false,
+        error: "この案件はすでに完全に削除されています(ごみ箱は30日で空になります)。",
+      };
+    }
+  } catch (e) {
+    console.error("restoreProjectAction failed:", e);
+    return { ok: false, error: "戻すのに失敗しました。もう一度お試しください。" };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "案件を一覧に戻しました。" };
 }
 
 // ---------------------------------------------------------------------------

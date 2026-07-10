@@ -99,9 +99,13 @@ const stageSelect = {
   select: { stageKey: true, status: true, date: true, memo: true },
 } as const;
 
+// ごみ箱に入っていない(削除されていない)案件だけを対象にする条件
+const notDeleted = { deletedAt: null } as const;
+
 /** 一覧表・ダッシュボード用は新しい順、CSV出力用は登録の古い順で全案件を読む */
 export async function listProjects(order: "asc" | "desc" = "desc"): Promise<ProjectWithStages[]> {
   const projects = await getPrisma().project.findMany({
+    where: notDeleted,
     orderBy: { id: order },
     include: { stages: stageSelect },
   });
@@ -109,8 +113,8 @@ export async function listProjects(order: "asc" | "desc" = "desc"): Promise<Proj
 }
 
 export async function getProject(id: number): Promise<ProjectWithStages | null> {
-  const project = await getPrisma().project.findUnique({
-    where: { id },
+  const project = await getPrisma().project.findFirst({
+    where: { id, ...notDeleted },
     include: { stages: stageSelect },
   });
   return project ? decorate(project) : null;
@@ -118,28 +122,35 @@ export async function getProject(id: number): Promise<ProjectWithStages | null> 
 
 /** 存在チェックだけ(編集・削除の前の確認用。工程まで読む必要がないとき) */
 export async function projectExists(id: number): Promise<boolean> {
-  const project = await getPrisma().project.findUnique({
-    where: { id },
+  const project = await getPrisma().project.findFirst({
+    where: { id, ...notDeleted },
     select: { id: true },
   });
   return project !== null;
 }
 
-export async function createProject(input: ProjectInput): Promise<number> {
+export async function createProject(
+  input: ProjectInput,
+  changedBy: string | null = null,
+): Promise<number> {
   const project = await getPrisma().project.create({
     data: {
       clientName: input.clientName,
       partnerName: input.partnerName,
       projectName: input.projectName,
       memo: input.memo,
-      logs: { create: { action: "案件を登録しました" } },
+      logs: { create: { action: "案件を登録しました", changedBy } },
     },
     select: { id: true },
   });
   return project.id;
 }
 
-export async function updateProject(id: number, input: ProjectInput): Promise<void> {
+export async function updateProject(
+  id: number,
+  input: ProjectInput,
+  changedBy: string | null = null,
+): Promise<void> {
   await getPrisma().project.update({
     where: { id },
     data: {
@@ -147,17 +158,36 @@ export async function updateProject(id: number, input: ProjectInput): Promise<vo
       partnerName: input.partnerName,
       projectName: input.projectName,
       memo: input.memo,
-      logs: { create: { action: "基本情報(社名・協力会社・案件名・備考)を変更しました" } },
+      logs: {
+        create: {
+          action: "基本情報(社名・協力会社・案件名・備考)を変更しました",
+          changedBy,
+        },
+      },
     },
   });
 }
 
-export async function deleteProject(id: number): Promise<void> {
-  await getPrisma().project.delete({ where: { id } });
+/** 削除 = ごみ箱へ移動(30日以内なら戻せる) */
+export async function deleteProject(
+  id: number,
+  changedBy: string | null = null,
+): Promise<void> {
+  await getPrisma().project.update({
+    where: { id },
+    data: {
+      deletedAt: new Date(),
+      logs: { create: { action: "案件をごみ箱に移動しました", changedBy } },
+    },
+  });
 }
 
 /** 振分け画面用: 協力会社だけを変更する(履歴に残す) */
-export async function assignPartner(id: number, partnerName: string | null): Promise<void> {
+export async function assignPartner(
+  id: number,
+  partnerName: string | null,
+  changedBy: string | null = null,
+): Promise<void> {
   await getPrisma().project.update({
     where: { id },
     data: {
@@ -167,6 +197,7 @@ export async function assignPartner(id: number, partnerName: string | null): Pro
           action: partnerName
             ? `協力会社を「${partnerName}」にしました`
             : "協力会社の割り当てを外しました",
+          changedBy,
         },
       },
     },
@@ -186,6 +217,7 @@ export async function upsertStage(
   projectId: number,
   stageKey: StageKey,
   input: StageInput,
+  changedBy: string | null = null,
 ): Promise<void> {
   await getPrisma().$transaction([
     getPrisma().projectStage.upsert({
@@ -198,7 +230,9 @@ export async function upsertStage(
       where: { id: projectId },
       data: {
         updatedAt: new Date(),
-        logs: { create: { action: stageChangeMessage(stageLabel(stageKey), input) } },
+        logs: {
+          create: { action: stageChangeMessage(stageLabel(stageKey), input), changedBy },
+        },
       },
     }),
   ]);
@@ -212,6 +246,7 @@ export async function updateStages(
   projectId: number,
   inputs: Partial<Record<StageKey, StageInput>>,
   current: StageStateMap,
+  changedBy: string | null = null,
 ): Promise<void> {
   const ops = [];
   const changedActions: string[] = [];
@@ -239,14 +274,19 @@ export async function updateStages(
       where: { id: projectId },
       data: {
         updatedAt: new Date(),
-        logs: { create: changedActions.map((action) => ({ action })) },
+        logs: { create: changedActions.map((action) => ({ action, changedBy })) },
       },
     }),
   );
   await getPrisma().$transaction(ops);
 }
 
-export type ProjectLogEntry = { id: number; action: string; createdAt: Date };
+export type ProjectLogEntry = {
+  id: number;
+  action: string;
+  changedBy: string | null;
+  createdAt: Date;
+};
 
 /** 詳細ページ用: 更新履歴(新しい順) */
 export async function listLogs(projectId: number, limit = 30): Promise<ProjectLogEntry[]> {
@@ -254,7 +294,7 @@ export async function listLogs(projectId: number, limit = 30): Promise<ProjectLo
     where: { projectId },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit,
-    select: { id: true, action: true, createdAt: true },
+    select: { id: true, action: true, changedBy: true, createdAt: true },
   });
 }
 
@@ -268,6 +308,7 @@ export type ProjectSummary = {
 /** ヘッダーのサマリー用: 案件数を状態別に数える(必要な列だけ読む軽い集計) */
 export async function getProjectSummary(): Promise<ProjectSummary> {
   const projects = await getPrisma().project.findMany({
+    where: notDeleted,
     select: { stages: { select: { stageKey: true, status: true } } },
   });
   const counts = countByPhase(

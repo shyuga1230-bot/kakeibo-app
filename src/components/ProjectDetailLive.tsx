@@ -18,7 +18,7 @@ import DeleteProjectButton from "@/components/DeleteProjectButton";
 
 const AUTO_REFRESH_MS = 30_000;
 
-export type ProjectLogItem = { id: number; action: string; at: string };
+export type ProjectLogItem = { id: number; action: string; by?: string | null; at: string };
 
 type Live = {
   phase: ProjectPhase;
@@ -122,7 +122,10 @@ export default function ProjectDetailLive({
                 <span className="whitespace-nowrap tabular-nums text-slate-400">
                   {formatDateTimeJst(new Date(log.at))}
                 </span>
-                <span className="min-w-0 break-words text-slate-700">{log.action}</span>
+                <span className="min-w-0 break-words text-slate-700">
+                  {log.action}
+                  {log.by && <span className="ml-1.5 text-xs text-slate-400">({log.by})</span>}
+                </span>
               </li>
             ))}
           </ul>
@@ -132,7 +135,7 @@ export default function ProjectDetailLive({
       <section className="rounded-xl border border-red-100 bg-white p-4 shadow-sm sm:p-6">
         <h2 className="text-base font-bold text-red-700">案件の削除</h2>
         <p className="mt-1 text-sm text-slate-600">
-          間違えて登録した場合などに削除できます。削除すると元に戻せません。
+          間違えて登録した場合などに削除できます。削除した案件は「ごみ箱」から30日以内なら戻せます。
         </p>
         <div className="mt-3">
           <DeleteProjectButton projectId={project.id} description={description} />

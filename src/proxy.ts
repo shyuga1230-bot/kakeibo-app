@@ -21,6 +21,9 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // 静的ファイルと API には適用しない(API は各処理の中で自らチェックする)
-  matcher: ["/((?!api|_next/static|_next/image|favicon\\.ico|sw\\.js|robots\\.txt).*)"],
+  // 静的ファイルと API には適用しない(API は各処理の中で自らチェックする)。
+  // マニフェストとアイコンは「ホーム画面に追加」のためログイン前でも取得できるようにする。
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon\\.ico|sw\\.js|robots\\.txt|manifest\\.webmanifest|icon\\.svg|apple-icon\\.png|icon-192\\.png|icon-512\\.png|icon-maskable-512\\.png).*)",
+  ],
 };

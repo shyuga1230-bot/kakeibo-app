@@ -34,6 +34,7 @@ export default async function ProjectDetailPage({
       initialLogs={logs.map((l) => ({
         id: l.id,
         action: l.action,
+        by: l.changedBy,
         at: l.createdAt.toISOString(),
       }))}
     />
