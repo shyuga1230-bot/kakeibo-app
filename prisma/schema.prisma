@@ -102,6 +102,18 @@ model Partner {
   @@map("partners")
 }
 
+// 社員名簿(ログイン時に名前をプルダウンで選べるようにするための一覧)。
+// 見積もりや更新履歴の名前は文字列で保存するため、
+// ここの名前を変えたり消したりしても過去の記録は変わらない。
+model Member {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("members")
+}
+
 // 案件の更新履歴(誰かが変更した内容を新しい順に表示するための記録)
 model ProjectLog {
   id        Int      @id @default(autoincrement())

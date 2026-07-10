@@ -1,45 +1,80 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { LogIn } from "lucide-react";
 import { loginAction } from "@/app/actions";
 
 // 前回入力した名前をこの端末に覚えておくためのキー
 const NAME_STORAGE_KEY = "ark-login-name";
+// プルダウンの「その他(自分で入力)」用の値
+const OTHER = "__other__";
 
-export default function LoginForm() {
+export default function LoginForm({ memberNames }: { memberNames: string[] }) {
   const [state, formAction, pending] = useActionState(loginAction, null);
+  const hasList = memberNames.length > 0;
+  const [selected, setSelected] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
 
-  // 前回の名前を自動で入れる(端末ごとに記憶)
+  // 前回の名前を自動で選ぶ・入れる(端末ごとに記憶)
   useEffect(() => {
     const saved = localStorage.getItem(NAME_STORAGE_KEY);
-    if (saved && nameRef.current && nameRef.current.value === "") {
+    if (!saved) return;
+    if (hasList && memberNames.includes(saved)) {
+      setSelected(saved);
+    } else if (nameRef.current && nameRef.current.value === "") {
       nameRef.current.value = saved;
+      if (hasList) setSelected(OTHER);
     }
+    // 初回マウント時に一度だけ実行したい
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const freeInputVisible = !hasList || selected === OTHER;
 
   return (
     <form
       action={formAction}
-      onSubmit={() => {
-        const name = nameRef.current?.value.trim();
+      onSubmit={(e) => {
+        const form = e.currentTarget;
+        const name = String(new FormData(form).get("user_name") ?? "").trim();
         if (name) localStorage.setItem(NAME_STORAGE_KEY, name);
       }}
       className="mt-4 space-y-3"
     >
       <label className="block">
         <span className="text-sm font-medium">お名前</span>
-        <input
-          type="text"
-          name="user_name"
-          ref={nameRef}
-          required
-          maxLength={30}
-          placeholder="例: 山田"
-          autoComplete="username"
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-base focus:border-blue-500 focus:outline-none"
-        />
+        {hasList && (
+          <select
+            {...(selected === OTHER ? {} : { name: "user_name" })}
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            required={selected !== OTHER}
+            aria-label="名前を選ぶ"
+            className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-base focus:border-blue-500 focus:outline-none"
+          >
+            <option value="" disabled>
+              名前を選んでください…
+            </option>
+            {memberNames.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+            <option value={OTHER}>その他(自分で入力)</option>
+          </select>
+        )}
+        {freeInputVisible && (
+          <input
+            type="text"
+            name="user_name"
+            ref={nameRef}
+            required
+            maxLength={30}
+            placeholder="例: 山田"
+            autoComplete="username"
+            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-base focus:border-blue-500 focus:outline-none"
+          />
+        )}
         <span className="mt-1 block text-xs text-slate-500">
           登録や変更の記録に「誰がやったか」として残ります。
         </span>

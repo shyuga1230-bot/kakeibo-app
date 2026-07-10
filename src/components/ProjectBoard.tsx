@@ -18,6 +18,7 @@ import {
   STAGES,
   STATUSES,
   countByPhase,
+  currentStageKey,
   dateAfterStatusChange,
   stageLabel,
   stageState,
@@ -188,7 +189,8 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
   const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
-  const [phaseFilter, setPhaseFilter] = useState<"all" | ProjectPhase>("all");
+  // 初期表示は「未完了だけ」。完了した案件がたまっても一覧が長くならないようにする
+  const [phaseFilter, setPhaseFilter] = useState<"all" | "active" | ProjectPhase>("active");
   const [editing, setEditing] = useState<{ project: BoardProject; stageKey: StageKey } | null>(
     null,
   );
@@ -230,7 +232,11 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return projects.filter((p) => {
-      if (phaseFilter !== "all" && p.phase !== phaseFilter) return false;
+      if (phaseFilter === "active") {
+        if (p.phase === "done") return false;
+      } else if (phaseFilter !== "all" && p.phase !== phaseFilter) {
+        return false;
+      }
       if (q === "") return true;
       return [p.projectName, p.clientName ?? "", p.partnerName ?? "", p.memo ?? ""]
         .join("\n")
@@ -239,7 +245,7 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
     });
   }, [projects, query, phaseFilter]);
 
-  const phaseButton = (value: "all" | ProjectPhase, label: string, count: number) => (
+  const phaseButton = (value: "all" | "active" | ProjectPhase, label: string, count: number) => (
     <button
       key={value}
       type="button"
@@ -273,6 +279,7 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
           />
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
+          {phaseButton("active", "未完了", projects.length - counts.done)}
           {phaseButton("all", "すべて", projects.length)}
           {PROJECT_PHASES.map((p) => phaseButton(p.key, p.label, counts[p.key]))}
         </div>
@@ -293,8 +300,8 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
         </p>
       )}
 
-      {/* 色の意味の凡例 */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+      {/* 色の意味の凡例(表はPCのみなので、凡例もPCのみ) */}
+      <div className="hidden flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 sm:flex">
         <span>セルを押すと状態を変更できます。</span>
         {STATUSES.map((s) => (
           <span key={s.key} className="flex items-center gap-1">
@@ -313,7 +320,64 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+        <>
+        {/* スマホ: 横長の表の代わりに、1案件=1カードの縦一覧。
+            「いまの工程を更新」でその工程の編集がすぐ開く */}
+        <ul className="space-y-2 sm:hidden">
+          {filtered.map((p) => {
+            const cur = currentStageKey(p.stages);
+            return (
+              <li key={p.id} className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-900/5">
+                <div className="flex items-start justify-between gap-2">
+                  <Link
+                    href={`/projects/${p.id}`}
+                    className="min-w-0 break-words text-sm font-bold text-blue-700"
+                    title="案件の詳細(全工程の編集・更新履歴)を開きます"
+                  >
+                    {p.projectName}
+                  </Link>
+                  <PhaseChip phase={p.phase} />
+                </div>
+                <p className="mt-0.5 break-words text-xs text-slate-500">
+                  {p.clientName ?? "(社名なし)"}
+                  {p.partnerName && (
+                    <span className="text-slate-400"> / 協力: {p.partnerName}</span>
+                  )}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1.5 w-full overflow-hidden rounded bg-slate-100">
+                    <div
+                      className="h-full rounded bg-green-500"
+                      style={{ width: `${p.progress.percent}%` }}
+                    />
+                  </div>
+                  <span className="whitespace-nowrap text-[10px] tabular-nums text-slate-500">
+                    {p.progress.done}/{p.progress.applicable}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-xs text-slate-600">
+                    いまの工程:{" "}
+                    <b className="text-slate-800">
+                      {cur ? stageLabel(cur) : "すべて完了"}
+                    </b>
+                  </span>
+                  {cur && (
+                    <button
+                      type="button"
+                      onClick={() => setEditing({ project: p, stageKey: cur })}
+                      className="shrink-0 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                    >
+                      この工程を更新
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm sm:block">
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr>
@@ -402,6 +466,7 @@ export default function ProjectBoard({ initialProjects }: { initialProjects: Boa
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {editing && (

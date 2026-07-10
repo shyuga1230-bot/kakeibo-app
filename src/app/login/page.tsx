@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import ArkLogo from "@/components/ArkLogo";
 import LoginForm from "@/components/LoginForm";
+import { listMembersSafe } from "@/lib/members";
 
 export const metadata: Metadata = { title: "ログイン | Ark 見積・案件データベース" };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // 社員名簿(登録があれば名前をプルダウンで選べる。読めなければ自由入力)
+  const members = await listMembersSafe();
   return (
     <div className="mx-auto mt-12 max-w-sm">
       <div className="flex flex-col items-center text-center">
@@ -21,7 +24,7 @@ export default function LoginPage() {
           全社共通のパスワードを入力してください。
           パスワードが分からない場合は管理者に確認してください。
         </p>
-        <LoginForm />
+        <LoginForm memberNames={members.map((m) => m.name)} />
       </div>
 
       <p className="mt-6 text-center text-xs text-slate-400">

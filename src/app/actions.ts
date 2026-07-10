@@ -32,9 +32,11 @@ import {
   deleteMasterItem,
   ensureMasterItems,
   importMasterItemsFromHistory,
+  mergeItems,
   updateMasterItem,
 } from "@/lib/items";
 import { restoreProject, restoreQuote } from "@/lib/trash";
+import { createMember, deleteMember, updateMember } from "@/lib/members";
 
 /** 新しい商品を商品マスタへ自動追加(金額も標準金額として保存。失敗しても登録自体は成功扱い) */
 async function addNewNamesToMaster(
@@ -366,6 +368,89 @@ export async function bulkImportAction(
 }
 
 // ---------------------------------------------------------------------------
+// 社員名簿の管理
+// ---------------------------------------------------------------------------
+
+/** 社員名の入力チェック(登録・変更で共通) */
+function validateMemberName(
+  formData: FormData,
+): { ok: true; name: string } | { ok: false; error: string } {
+  const name = String(formData.get("name") ?? "")
+    .replace(/[\s　]+/g, " ")
+    .trim();
+  if (name === "") return { ok: false, error: "名前を入力してください。" };
+  if (name.length > 30) {
+    return { ok: false, error: "名前が長すぎます(30文字まで)。" };
+  }
+  return { ok: true, name };
+}
+
+export async function createMemberAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  const validated = validateMemberName(formData);
+  if (!validated.ok) return validated;
+  try {
+    await createMember(validated.name);
+  } catch (e) {
+    if (isUniqueError(e)) {
+      return { ok: false, error: `「${validated.name}」さんはすでに登録されています。` };
+    }
+    console.error("createMemberAction failed:", e);
+    return { ok: false, error: "保存に失敗しました。もう一度お試しください。" };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: `「${validated.name}」さんを名簿に登録しました。` };
+}
+
+export async function updateMemberAction(
+  memberId: number,
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  if (!Number.isInteger(memberId) || memberId <= 0) {
+    return { ok: false, error: "編集対象が見つかりません。" };
+  }
+  const validated = validateMemberName(formData);
+  if (!validated.ok) return validated;
+  try {
+    await updateMember(memberId, validated.name);
+  } catch (e) {
+    if (isUniqueError(e)) {
+      return { ok: false, error: `「${validated.name}」さんはすでに登録されています。` };
+    }
+    console.error("updateMemberAction failed:", e);
+    return {
+      ok: false,
+      error: "保存に失敗しました。この名前はすでに削除されている可能性があります。",
+    };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "変更を保存しました。" };
+}
+
+export async function deleteMemberAction(memberId: number): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  if (!Number.isInteger(memberId) || memberId <= 0) {
+    return { ok: false, error: "削除対象が見つかりません。" };
+  }
+  try {
+    await deleteMember(memberId);
+  } catch (e) {
+    console.error("deleteMemberAction failed:", e);
+    return {
+      ok: false,
+      error: "削除に失敗しました。すでに削除されている可能性があります。",
+    };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "名簿から削除しました(過去の記録の名前は残ります)。" };
+}
+
+// ---------------------------------------------------------------------------
 // ごみ箱(削除した見積もり・案件を戻す)
 // ---------------------------------------------------------------------------
 
@@ -497,6 +582,36 @@ export async function deleteMasterItemAction(itemId: number): Promise<ActionResu
   }
   revalidatePath("/", "layout");
   return { ok: true, message: "商品を削除しました。" };
+}
+
+/** 商品の統合(名寄せ)。fromName を toName にまとめ、過去の明細も書き換える */
+export async function mergeItemsAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  const fromName = normalizeItemName(String(formData.get("from_name") ?? ""));
+  const toName = normalizeItemName(String(formData.get("to_name") ?? ""));
+  if (fromName === "" || toName === "") {
+    return { ok: false, error: "統合する商品と統合先の商品を選んでください。" };
+  }
+  if (fromName === toName) {
+    return { ok: false, error: "同じ商品どうしは統合できません。" };
+  }
+  try {
+    const changed = await mergeItems(fromName, toName);
+    revalidatePath("/", "layout");
+    return {
+      ok: true,
+      message:
+        changed === 0
+          ? `「${fromName}」を「${toName}」に統合しました(書き換える明細はありませんでした)。`
+          : `「${fromName}」を「${toName}」に統合し、${changed}件の明細を書き換えました。`,
+    };
+  } catch (e) {
+    console.error("mergeItemsAction failed:", e);
+    return { ok: false, error: "統合に失敗しました。もう一度お試しください。" };
+  }
 }
 
 export async function importMasterItemsAction(): Promise<ActionResult> {
