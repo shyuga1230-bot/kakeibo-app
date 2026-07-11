@@ -125,9 +125,15 @@ export default function SheetPaste({ aiEnabled, onParsed }: Props) {
 
   return (
     <div className="rounded-lg border border-dashed border-blue-300 bg-blue-50/50 p-3">
-      <p className="flex items-center gap-1.5 text-sm font-medium text-blue-900">
+      <p className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-blue-900">
         <FileSpreadsheet className="h-4 w-4" aria-hidden />
         見積書(Excel)から自動入力
+        {aiEnabled && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+            <Sparkles className="h-3 w-3" aria-hidden />
+            AI読み取り対応
+          </span>
+        )}
       </p>
       <p className="mt-1 text-xs text-slate-600">
         見積書のExcelファイル(.xlsx)を選ぶと、日付・顧客名・項目・金額を自動で読み取ってフォームに入れます
@@ -135,6 +141,14 @@ export default function SheetPaste({ aiEnabled, onParsed }: Props) {
         {aiEnabled &&
           "決まった形でない見積書は、AIが読み取ります(1回あたり約1円)。"}
       </p>
+      {/* 未設定でも機能の存在がわかるように、状態を必ず表示する */}
+      {!aiEnabled && (
+        <p className="mt-1.5 rounded-md bg-slate-100 px-2.5 py-1.5 text-xs text-slate-500">
+          決まった形でない見積書をAIで読み取る機能は、いまは<b>未設定</b>のため使えません。
+          Vercelの環境変数に <code className="font-mono">ANTHROPIC_API_KEY</code>{" "}
+          を設定して再デプロイすると、ここに「AI読み取り対応」と表示されて使えるようになります。
+        </p>
+      )}
 
       <input
         ref={fileRef}
