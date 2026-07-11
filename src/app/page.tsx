@@ -18,7 +18,10 @@ export default async function RegisterPage() {
           受注した見積もりを1件ずつ登録します(全員で共有されます)。
         </p>
         <div className="mt-4">
-          <RegisterPanel masterItems={masterItems} />
+          <RegisterPanel
+            masterItems={masterItems}
+            aiEnabled={Boolean(process.env.ANTHROPIC_API_KEY)}
+          />
         </div>
       </section>
 

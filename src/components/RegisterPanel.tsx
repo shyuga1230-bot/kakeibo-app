@@ -5,25 +5,27 @@
 
 import { useRef, useState } from "react";
 import QuoteForm, { type QuoteFormPrefill } from "@/components/QuoteForm";
-import SheetPaste from "@/components/SheetPaste";
+import SheetPaste, { type ParseSource } from "@/components/SheetPaste";
 import type { ParsedQuoteSheet } from "@/lib/quote-sheet";
 
 type Props = {
   masterItems: { name: string; defaultAmount: number | null }[];
+  aiEnabled: boolean;
 };
 
 type ParseInfo = {
   itemCount: number;
   warnings: string[];
+  source: ParseSource;
 };
 
-export default function RegisterPanel({ masterItems }: Props) {
+export default function RegisterPanel({ masterItems, aiEnabled }: Props) {
   const [prefill, setPrefill] = useState<QuoteFormPrefill | null>(null);
   const [parseInfo, setParseInfo] = useState<ParseInfo | null>(null);
   const [formKey, setFormKey] = useState(0);
   const formRef = useRef<HTMLDivElement>(null);
 
-  const handleParsed = (data: ParsedQuoteSheet) => {
+  const handleParsed = (data: ParsedQuoteSheet, source: ParseSource) => {
     setPrefill({
       quoteDate: data.quoteDate ?? "",
       customerName: data.customerName ?? "",
@@ -33,7 +35,7 @@ export default function RegisterPanel({ masterItems }: Props) {
         amount: i.amount == null ? "" : String(i.amount),
       })),
     });
-    setParseInfo({ itemCount: data.items.length, warnings: data.warnings });
+    setParseInfo({ itemCount: data.items.length, warnings: data.warnings, source });
     // フォームを読み取り結果で作り直す(key を変えるとフォームがリセットされる)
     setFormKey((k) => k + 1);
     setTimeout(() => {
@@ -43,13 +45,14 @@ export default function RegisterPanel({ masterItems }: Props) {
 
   return (
     <div className="space-y-4">
-      <SheetPaste onParsed={handleParsed} />
+      <SheetPaste aiEnabled={aiEnabled} onParsed={handleParsed} />
       <div ref={formRef} className="scroll-mt-2 space-y-2">
         {parseInfo && (
           <div className="space-y-1">
             <p role="status" className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-              ✓ 見積書を読み取り、下のフォームに入れました({parseInfo.itemCount}
-              項目)。内容を確認して「この内容で登録する」を押してください。
+              {parseInfo.source === "ai"
+                ? `✓ AIが見積書を読み取り、下のフォームに入れました(${parseInfo.itemCount}項目)。AIは間違えることがあるので、日付・顧客名・金額を見積書と見比べてから登録してください。`
+                : `✓ 見積書を読み取り、下のフォームに入れました(${parseInfo.itemCount}項目)。内容を確認して「この内容で登録する」を押してください。`}
             </p>
             {parseInfo.warnings.map((w) => (
               <p key={w} className="rounded-md bg-amber-50 px-3 py-1.5 text-xs text-amber-800">

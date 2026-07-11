@@ -51,7 +51,17 @@ function looksLikeValueCell(cell: string): boolean {
   return UNIT_ONLY.test(squash(cell));
 }
 
-const MAX_ITEMS = 30;
+export const MAX_ITEMS = 30;
+
+/** 項目名の掃除(通し番号の丸数字を外して正規化)。AI読み取り側でも同じ規則を使う */
+export function cleanItemName(raw: string): string {
+  return normalizeItemName(raw.replace(CIRCLED_PREFIX, ""));
+}
+
+/** 経費・値引きなど、併売分析に入れない項目名か。AI読み取り側でも同じ規則を使う */
+export function isFeeItem(name: string): boolean {
+  return FEE_ROW.test(name);
+}
 
 /** セルの空白(全角含む)を除いた文字列。見出し判定用 */
 function squash(cell: string): string {
@@ -227,8 +237,7 @@ export function parseQuoteSheet(text: string): ParseSheetResult {
     // 注記(※…)や「以下余白」は項目ではない
     if (NOTE_ROW.test(rawName.trim()) || BLANK_BELOW.test(squashedName)) continue;
 
-    const cleaned = rawName.replace(CIRCLED_PREFIX, "");
-    const itemName = normalizeItemName(cleaned);
+    const itemName = cleanItemName(rawName);
     if (itemName === "") continue;
 
     if (FEE_ROW.test(itemName)) {
