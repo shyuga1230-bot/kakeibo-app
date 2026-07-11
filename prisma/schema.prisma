@@ -1,6 +1,7 @@
 // データベースの設計図(Prisma スキーマ)
 // 見積もり関連: quotes(見積もり) / quote_items(明細) / items(商品マスタ)
 // 案件管理関連: projects(案件) / project_stages(工程の進捗) / project_logs(更新履歴)
+// 書類関連: documents(納品書・請求書) / document_items(書類の明細) / company_settings(自社情報)
 
 generator client {
   provider = "prisma-client"
@@ -25,10 +26,88 @@ model Quote {
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
   items        QuoteItem[]
+  documents    Document[]
 
   @@index([quoteDate])
   @@index([deletedAt])
   @@map("quotes")
+}
+
+// 納品書・請求書1枚。見積もりから作るときも内容をコピーして保存するため、
+// あとから見積もりを変えても書類は変わらない(直したいときは書類側を編集する)。
+model Document {
+  id           Int            @id @default(autoincrement())
+  // 種類: invoice(請求書) / delivery(納品書)
+  type         String
+  // 書類番号(例: "2026-0001")。種類ごとに年内の連番で自動採番、あとから変更もできる
+  docNumber    String         @map("doc_number")
+  // 日付は "YYYY-MM-DD" 形式の文字列(見積もりと同じ方針)
+  issueDate    String         @map("issue_date")
+  // お支払期限(請求書用・任意)
+  dueDate      String?        @map("due_date")
+  customerName String         @default("") @map("customer_name")
+  // 宛名の敬称(御中・様)
+  honorific    String         @default("御中")
+  // 件名(工事名など)
+  subject      String?
+  // 備考(書類の下部に印字される)
+  note         String?
+  // 消費税率(%)
+  taxRate      Int            @default(10) @map("tax_rate")
+  // 元になった見積もり。見積もりが完全削除されても書類は残る(SetNull)
+  quoteId      Int?           @map("quote_id")
+  createdBy    String?        @map("created_by")
+  // ごみ箱に入れた日時。NULL = 削除されていない。30日で完全削除される
+  deletedAt    DateTime?      @map("deleted_at")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  quote        Quote?         @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  items        DocumentItem[]
+
+  @@unique([type, docNumber])
+  @@index([deletedAt])
+  @@index([type, issueDate])
+  @@index([quoteId])
+  @@map("documents")
+}
+
+// 書類の明細1行(品名・数量・単位・単価・金額)
+model DocumentItem {
+  id         Int      @id @default(autoincrement())
+  documentId Int      @map("document_id")
+  // 表示順(0始まり)
+  position   Int
+  name       String
+  // 数量(1.5 など小数もあるため実数・任意)
+  quantity   Float?
+  // 単位(式・m2 など・任意)
+  unit       String?
+  // 単価(円・整数・任意)。入れると金額が 数量×単価 で自動計算される
+  unitPrice  Int?     @map("unit_price")
+  // 金額(円・整数)
+  amount     Int      @default(0)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, position])
+  @@map("document_items")
+}
+
+// 自社情報(納品書・請求書に印字する会社名・住所・振込先など)。1行だけ使う。
+model CompanySetting {
+  id           Int      @id @default(1)
+  name         String   @default("")
+  postal       String?
+  address      String?
+  tel          String?
+  fax          String?
+  email        String?
+  // 適格請求書発行事業者の登録番号(インボイス制度。T+13桁)
+  invoiceRegNo String?  @map("invoice_reg_no")
+  // 振込先(銀行名・支店・口座番号など。複数行で書ける)
+  bankInfo     String?  @map("bank_info")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("company_settings")
 }
 
 // 商品マスタ(よく売る商品・サービスをあらかじめ登録しておく)。

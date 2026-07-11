@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { listTrash, TRASH_DAYS } from "@/lib/trash";
+import { DOC_TYPES, isDocType } from "@/lib/document-calc";
 import { formatDate, toJstDateString } from "@/lib/format";
 import TrashView from "@/components/TrashView";
 
@@ -12,7 +13,7 @@ export const metadata = { title: "ごみ箱 | Ark 見積・案件データベー
 export default async function TrashPage() {
   if (!(await getSession())) redirect("/login");
 
-  const { quotes, projects } = await listTrash();
+  const { quotes, projects, documents } = await listTrash();
 
   return (
     <div className="space-y-4">
@@ -38,6 +39,12 @@ export default async function TrashPage() {
           title: p.projectName,
           subtitle: p.clientName ?? "(社名なし)",
           deletedAt: formatDate(toJstDateString(p.deletedAt)),
+        }))}
+        documents={documents.map((d) => ({
+          id: d.id,
+          title: `${isDocType(d.type) ? DOC_TYPES[d.type].label : d.type} No.${d.docNumber}`,
+          subtitle: d.customerName || "(宛名なし)",
+          deletedAt: formatDate(toJstDateString(d.deletedAt)),
         }))}
       />
 

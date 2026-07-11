@@ -20,6 +20,14 @@ export type TrashedProject = {
   deletedAt: Date;
 };
 
+export type TrashedDocument = {
+  id: number;
+  type: string;
+  docNumber: string;
+  customerName: string;
+  deletedAt: Date;
+};
+
 function cutoff(): Date {
   return new Date(Date.now() - TRASH_DAYS * 24 * 60 * 60 * 1000);
 }
@@ -30,6 +38,7 @@ export async function purgeExpiredTrash(): Promise<void> {
   await getPrisma().$transaction([
     getPrisma().quote.deleteMany({ where: { deletedAt: { lt: limit } } }),
     getPrisma().project.deleteMany({ where: { deletedAt: { lt: limit } } }),
+    getPrisma().document.deleteMany({ where: { deletedAt: { lt: limit } } }),
   ]);
 }
 
@@ -37,9 +46,10 @@ export async function purgeExpiredTrash(): Promise<void> {
 export async function listTrash(): Promise<{
   quotes: TrashedQuote[];
   projects: TrashedProject[];
+  documents: TrashedDocument[];
 }> {
   await purgeExpiredTrash();
-  const [quotes, projects] = await Promise.all([
+  const [quotes, projects, documents] = await Promise.all([
     getPrisma().quote.findMany({
       where: { deletedAt: { not: null } },
       orderBy: { deletedAt: "desc" },
@@ -61,6 +71,17 @@ export async function listTrash(): Promise<{
         deletedAt: true,
       },
     }),
+    getPrisma().document.findMany({
+      where: { deletedAt: { not: null } },
+      orderBy: { deletedAt: "desc" },
+      select: {
+        id: true,
+        type: true,
+        docNumber: true,
+        customerName: true,
+        deletedAt: true,
+      },
+    }),
   ]);
   return {
     quotes: quotes.map((q) => ({
@@ -76,12 +97,28 @@ export async function listTrash(): Promise<{
       clientName: p.clientName,
       deletedAt: p.deletedAt!,
     })),
+    documents: documents.map((d) => ({
+      id: d.id,
+      type: d.type,
+      docNumber: d.docNumber,
+      customerName: d.customerName,
+      deletedAt: d.deletedAt!,
+    })),
   };
 }
 
 /** 見積もりをごみ箱から戻す。戻せたら true(すでに完全削除済みなら false) */
 export async function restoreQuote(id: number): Promise<boolean> {
   const result = await getPrisma().quote.updateMany({
+    where: { id, deletedAt: { not: null } },
+    data: { deletedAt: null },
+  });
+  return result.count > 0;
+}
+
+/** 書類をごみ箱から戻す。戻せたら true(すでに完全削除済みなら false) */
+export async function restoreDocument(id: number): Promise<boolean> {
+  const result = await getPrisma().document.updateMany({
     where: { id, deletedAt: { not: null } },
     data: { deletedAt: null },
   });

@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { Pencil, PenLine, Search, Trash2 } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { listQuotes, type QuoteFilter } from "@/lib/quotes";
+import { listDocumentsForQuotes } from "@/lib/documents";
 import { formatDate, formatYen } from "@/lib/format";
 import DeleteQuoteButton from "@/components/DeleteQuoteButton";
+import QuoteDocLinks from "@/components/QuoteDocLinks";
 
 export const metadata = { title: "履歴 | Ark 見積・案件データベース" };
 
@@ -48,6 +50,7 @@ export default async function HistoryPage({
   const filtering = Boolean(filter.q || filter.from || filter.to);
 
   const { quotes, total, page: currentPage, pageCount } = await listQuotes(page, filter);
+  const docsByQuote = await listDocumentsForQuotes(quotes.map((q) => q.id));
 
   if (total === 0 && !filtering) {
     return (
@@ -182,6 +185,9 @@ export default async function HistoryPage({
                         {q.memo}
                       </p>
                     )}
+                    <div className="mt-2">
+                      <QuoteDocLinks quoteId={q.id} docs={docsByQuote.get(q.id) ?? []} />
+                    </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">
                     <span className="text-sm font-bold tabular-nums">
