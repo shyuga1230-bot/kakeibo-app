@@ -16,3 +16,30 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* 納品書・請求書の印刷: .print-area(A4シート)だけを印刷する */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  body {
+    background: white;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    overflow: visible !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}

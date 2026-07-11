@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Download,
+  FileText,
   FolderKanban,
   History,
   LogOut,
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/", label: "登録", icon: PenLine },
   { href: "/analysis", label: "分析", icon: TrendingUp },
   { href: "/history", label: "履歴", icon: History },
+  { href: "/documents", label: "書類", icon: FileText },
   { href: "/items", label: "商品管理", icon: Package },
   { href: "/projects", label: "案件管理", icon: FolderKanban },
 ];
@@ -99,14 +101,15 @@ export default function Header({ userName }: { userName?: string | null }) {
                 <Link
                   key={href}
                   href={href}
-                  className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 px-1.5 py-2.5 text-sm font-medium sm:flex-none sm:px-4 ${
+                  className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 px-1 py-2.5 text-xs font-medium sm:flex-none sm:px-4 sm:text-sm ${
                     active
                       ? "border-blue-600 font-semibold text-blue-700"
                       : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                   }`}
                   aria-current={active ? "page" : undefined}
                 >
-                  <Icon className="h-4 w-4" aria-hidden />
+                  {/* スマホはタブが6つ並ぶので、文字が折り返さないようアイコンを隠す */}
+                  <Icon className="hidden h-4 w-4 sm:block" aria-hidden />
                   {label}
                 </Link>
               );

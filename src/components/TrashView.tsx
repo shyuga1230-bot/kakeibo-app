@@ -5,7 +5,11 @@
 
 import { useState, useTransition } from "react";
 import { Undo2 } from "lucide-react";
-import { restoreProjectAction, restoreQuoteAction } from "@/app/actions";
+import {
+  restoreDocumentAction,
+  restoreProjectAction,
+  restoreQuoteAction,
+} from "@/app/actions";
 import type { ActionResult } from "@/app/actions";
 
 type Row = {
@@ -60,9 +64,10 @@ function RestoreRow({ row }: { row: Row }) {
 export type TrashViewProps = {
   quotes: { id: number; title: string; subtitle: string; deletedAt: string }[];
   projects: { id: number; title: string; subtitle: string; deletedAt: string }[];
+  documents: { id: number; title: string; subtitle: string; deletedAt: string }[];
 };
 
-export default function TrashView({ quotes, projects }: TrashViewProps) {
+export default function TrashView({ quotes, projects, documents }: TrashViewProps) {
   return (
     <div className="space-y-4">
       <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
@@ -80,6 +85,28 @@ export default function TrashView({ quotes, projects }: TrashViewProps) {
                   subtitle: q.subtitle,
                   deletedAt: q.deletedAt,
                   restore: () => restoreQuoteAction(q.id),
+                }}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 sm:p-6">
+        <h2 className="text-base font-bold">書類(納品書・請求書)({documents.length}件)</h2>
+        {documents.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">削除された書類はありません。</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {documents.map((d) => (
+              <RestoreRow
+                key={`d-${d.id}`}
+                row={{
+                  key: `d-${d.id}`,
+                  title: d.title,
+                  subtitle: d.subtitle,
+                  deletedAt: d.deletedAt,
+                  restore: () => restoreDocumentAction(d.id),
                 }}
               />
             ))}

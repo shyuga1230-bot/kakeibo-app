@@ -35,7 +35,7 @@ import {
   mergeItems,
   updateMasterItem,
 } from "@/lib/items";
-import { restoreProject, restoreQuote } from "@/lib/trash";
+import { restoreDocument, restoreProject, restoreQuote } from "@/lib/trash";
 import { createMember, deleteMember, updateMember } from "@/lib/members";
 
 /** 新しい商品を商品マスタへ自動追加(金額も標準金額として保存。失敗しても登録自体は成功扱い) */
@@ -472,6 +472,26 @@ export async function restoreQuoteAction(quoteId: number): Promise<ActionResult>
   }
   revalidatePath("/", "layout");
   return { ok: true, message: "見積もりを履歴に戻しました。" };
+}
+
+export async function restoreDocumentAction(documentId: number): Promise<ActionResult> {
+  if (!(await getSession())) return NOT_LOGGED_IN;
+  if (!Number.isInteger(documentId) || documentId <= 0) {
+    return { ok: false, error: "対象の書類が見つかりません。" };
+  }
+  try {
+    if (!(await restoreDocument(documentId))) {
+      return {
+        ok: false,
+        error: "この書類はすでに完全に削除されています(ごみ箱は30日で空になります)。",
+      };
+    }
+  } catch (e) {
+    console.error("restoreDocumentAction failed:", e);
+    return { ok: false, error: "戻すのに失敗しました。もう一度お試しください。" };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, message: "書類を一覧に戻しました。" };
 }
 
 export async function restoreProjectAction(projectId: number): Promise<ActionResult> {
