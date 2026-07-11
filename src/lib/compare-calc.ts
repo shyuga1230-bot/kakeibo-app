@@ -5,20 +5,25 @@
 import { normalizeItemName } from "@/lib/normalize";
 import { isFeeItem } from "@/lib/quote-sheet";
 
+/** 見積もり側の明細。金額は未入力(null)のことがある */
+export type QuoteCompareItem = { name: string; amount: number | null };
 export type CompareItem = { name: string; amount: number };
 
 export type ItemDiff = {
-  /** 見積もりにも請求書にもある項目(金額の変化を見る) */
-  common: { name: string; quoteAmount: number; invoiceAmount: number }[];
+  /**
+   * 見積もりにも請求書にもある項目(金額の変化を見る)。
+   * quoteAmount が null = 見積もりに金額が入っていなかった(比較できない)
+   */
+  common: { name: string; quoteAmount: number | null; invoiceAmount: number }[];
   /** 請求書で追加された項目。経費(諸経費など)は見積もりに元々入らないため印を付ける */
   added: { name: string; amount: number; isFee: boolean }[];
   /** 見積もりにあったのに請求書に無い項目 */
-  removed: { name: string; amount: number }[];
+  removed: { name: string; amount: number | null }[];
 };
 
 /** 項目名で突き合わせて、共通・追加・削除に分ける(表記ゆれは正規化して吸収) */
 export function diffItems(
-  quoteItems: readonly CompareItem[],
+  quoteItems: readonly QuoteCompareItem[],
   invoiceItems: readonly CompareItem[],
 ): ItemDiff {
   const invoiceByName = new Map<string, CompareItem>();
@@ -61,9 +66,12 @@ export type QuotePair = {
   quoteDate: string;
   customerName: string | null;
   memo: string | null;
+  /** 見積もりの合計(金額未入力の項目は含まれない) */
   quoteTotal: number;
   /** 見積もりに紐づく請求書(複数あれば合算)の税抜合計 */
   invoiceTotal: number;
+  /** 見積もりで金額が未入力だった項目の数。0でなければ増減の判定はあてにならない */
+  unknownQuoteAmounts: number;
   invoiceCount: number;
   invoiceIds: number[];
   diff: ItemDiff;
@@ -79,10 +87,12 @@ export type CompareSummary = {
   addedRanking: ItemChangeRank[];
   /** 請求までに削られやすい項目 */
   removedRanking: ItemChangeRank[];
-  /** 金額が増えた/減った案件の数 */
+  /** 金額が増えた/減った案件の数(見積もりに金額未入力がある案件は判定しない) */
   increased: number;
   decreased: number;
   unchanged: number;
+  /** 見積もりに金額未入力の項目があり、増減を判定できない案件の数 */
+  notComparable: number;
   customers: { name: string; count: number; quoteSum: number; invoiceSum: number }[];
 };
 
@@ -93,7 +103,7 @@ export function changeRatePercent(quoteTotal: number, invoiceTotal: number): num
 }
 
 function rankChanges(
-  entries: { name: string; amount: number }[],
+  entries: { name: string; amount: number | null }[],
   topN: number,
 ): ItemChangeRank[] {
   const byName = new Map<string, ItemChangeRank>();
@@ -101,7 +111,7 @@ function rankChanges(
     const key = normalizeItemName(e.name);
     const cur = byName.get(key) ?? { name: e.name, count: 0, totalAmount: 0 };
     cur.count += 1;
-    cur.totalAmount += e.amount;
+    cur.totalAmount += e.amount ?? 0;
     byName.set(key, cur);
   }
   return [...byName.values()]
@@ -116,14 +126,18 @@ export function summarizePairs(pairs: readonly QuotePair[], topN = 5): CompareSu
   let increased = 0;
   let decreased = 0;
   let unchanged = 0;
+  let notComparable = 0;
   const added: { name: string; amount: number }[] = [];
-  const removed: { name: string; amount: number }[] = [];
+  const removed: { name: string; amount: number | null }[] = [];
   const customers = new Map<string, { name: string; count: number; quoteSum: number; invoiceSum: number }>();
 
   for (const p of pairs) {
     quoteSum += p.quoteTotal;
     invoiceSum += p.invoiceTotal;
-    if (p.invoiceTotal > p.quoteTotal) increased++;
+    // 見積もりに金額未入力の項目があると、見積もり側の合計が本当より小さく出るため
+    // 増減の判定からは外す(「増額」と誤解させないため)
+    if (p.unknownQuoteAmounts > 0) notComparable++;
+    else if (p.invoiceTotal > p.quoteTotal) increased++;
     else if (p.invoiceTotal < p.quoteTotal) decreased++;
     else unchanged++;
     // 経費(諸経費など)は見積もりに元々入らない決まりなので、傾向ランキングからは外す
@@ -147,6 +161,9 @@ export function summarizePairs(pairs: readonly QuotePair[], topN = 5): CompareSu
     increased,
     decreased,
     unchanged,
-    customers: [...customers.values()].sort((a, b) => b.invoiceSum - a.invoiceSum),
+    notComparable,
+    customers: [...customers.values()].sort(
+      (a, b) => b.invoiceSum - a.invoiceSum || a.name.localeCompare(b.name, "ja"),
+    ),
   };
 }

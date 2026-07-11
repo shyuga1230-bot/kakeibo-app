@@ -27,16 +27,20 @@ export default function AnalysisChat() {
     if (q === "" || pending) return;
     setError(null);
     setInput("");
-    // 会話が長くなりすぎないよう、直近のやりとりだけを送る(古いものは落とす)
-    const history = [...messages.slice(-9), { role: "user" as const, content: q }];
-    setMessages(history);
+    // 画面には全部残しつつ、AIへは直近のやりとりだけを送る(送る量=料金のため)。
+    // APIは「最初のメッセージ=質問(user)」を要求するため、切ったあと先頭が
+    // 答え(assistant)になっていたら読み飛ばす
+    const nextMessages = [...messages, { role: "user" as const, content: q }];
+    setMessages(nextMessages);
+    const sendWindow = nextMessages.slice(-9);
+    while (sendWindow.length > 0 && sendWindow[0].role !== "user") sendWindow.shift();
     setPending(true);
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     try {
       const res = await fetch("/api/analysis/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history }),
+        body: JSON.stringify({ messages: sendWindow }),
       });
       const json = (await res.json().catch(() => null)) as
         | { text?: string; error?: string }

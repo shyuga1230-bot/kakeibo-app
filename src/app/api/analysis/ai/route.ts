@@ -28,6 +28,10 @@ function parseMessages(body: unknown): ChatMessage[] | null {
     messages.push({ role, content });
   }
   if (messages[messages.length - 1].role !== "user") return null;
+  // APIは「最初のメッセージは質問(user)」を要求する。画面側でも揃えているが、
+  // 万一崩れていても答えられるよう、先頭の答え(assistant)は読み飛ばす
+  while (messages.length > 0 && messages[0].role !== "user") messages.shift();
+  if (messages.length === 0) return null;
   return messages;
 }
 

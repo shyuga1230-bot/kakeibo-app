@@ -30,21 +30,36 @@ function RateBadge({ quote, invoice }: { quote: number; invoice: number }) {
 
 /** 1案件分の、項目ごとの変化の表 */
 function PairDiff({ pair }: { pair: QuotePair }) {
-  const changedCommon = pair.diff.common.filter((c) => c.quoteAmount !== c.invoiceAmount);
-  const sameCount = pair.diff.common.length - changedCommon.length;
+  // 見積もりに金額が入っていない項目は「変わった」とは言えないため分けて見せる
+  const changedCommon = pair.diff.common.filter(
+    (c) => c.quoteAmount != null && c.quoteAmount !== c.invoiceAmount,
+  );
+  const unknownCommon = pair.diff.common.filter((c) => c.quoteAmount == null);
+  const sameCount = pair.diff.common.length - changedCommon.length - unknownCommon.length;
   return (
     <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 text-sm">
-      {changedCommon.length === 0 && pair.diff.added.length === 0 && pair.diff.removed.length === 0 ? (
+      {changedCommon.length === 0 &&
+      unknownCommon.length === 0 &&
+      pair.diff.added.length === 0 &&
+      pair.diff.removed.length === 0 ? (
         <p className="text-slate-500">項目・金額とも見積もりどおりに請求されています。</p>
       ) : (
         <>
           {changedCommon.map((c) => (
             <p key={`c-${c.name}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <span className="min-w-0 break-all font-medium">{c.name}</span>
-              <span className="tabular-nums text-slate-500">¥{formatYen(c.quoteAmount)}</span>
+              <span className="tabular-nums text-slate-500">¥{formatYen(c.quoteAmount!)}</span>
               <ArrowRight className="h-3.5 w-3.5 text-slate-400" aria-hidden />
               <span className="tabular-nums">¥{formatYen(c.invoiceAmount)}</span>
-              <RateBadge quote={c.quoteAmount} invoice={c.invoiceAmount} />
+              <RateBadge quote={c.quoteAmount!} invoice={c.invoiceAmount} />
+            </p>
+          ))}
+          {unknownCommon.map((c) => (
+            <p key={`u-${c.name}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className="min-w-0 break-all font-medium">{c.name}</span>
+              <span className="text-xs text-slate-400">見積もりの金額が未入力</span>
+              <ArrowRight className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+              <span className="tabular-nums">¥{formatYen(c.invoiceAmount)}</span>
             </p>
           ))}
           {pair.diff.added.map((a) => (
@@ -66,7 +81,9 @@ function PairDiff({ pair }: { pair: QuotePair }) {
             <p key={`r-${r.name}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <Minus className="h-3.5 w-3.5 text-red-600" aria-hidden />
               <span className="min-w-0 break-all text-slate-500 line-through">{r.name}</span>
-              <span className="tabular-nums text-red-700">−¥{formatYen(r.amount)}</span>
+              {r.amount != null && (
+                <span className="tabular-nums text-red-700">−¥{formatYen(r.amount)}</span>
+              )}
               <span className="text-xs text-slate-400">(請求されず)</span>
             </p>
           ))}
@@ -94,7 +111,7 @@ function PairDiff({ pair }: { pair: QuotePair }) {
 export default async function ComparePage() {
   if (!(await getSession())) redirect("/login");
 
-  const pairs = await loadQuoteInvoicePairs();
+  const { pairs, total } = await loadQuoteInvoicePairs();
   const summary = summarizePairs(pairs);
 
   if (pairs.length === 0) {
@@ -123,7 +140,10 @@ export default async function ComparePage() {
     <div className="space-y-4">
       <AnalysisTabs active="compare" />
       <p className="text-sm text-slate-600">
-        見積もりと、そこから作った請求書(税抜)を突き合わせています。対象 {summary.count} 件。
+        見積もりと、そこから作った請求書(税抜)を突き合わせています。
+        {total > pairs.length
+          ? `全${total}件のうち、新しい${pairs.length}件を対象にしています。`
+          : `対象 ${summary.count} 件。`}
       </p>
 
       {/* 全体のまとめ */}
@@ -147,6 +167,11 @@ export default async function ComparePage() {
             <span className="font-bold">{summary.unchanged}件</span>
             <span className="text-slate-500"> 変わらず</span>
           </p>
+          {summary.notComparable > 0 && (
+            <p className="mt-0.5 text-xs text-slate-400">
+              ほか{summary.notComparable}件は見積もりに金額未入力の項目があるため判定していません。
+            </p>
+          )}
         </div>
         <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
           <p className="text-xs text-slate-500">見方</p>
@@ -256,7 +281,9 @@ export default async function ComparePage() {
             >
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="font-medium tabular-nums">{formatDate(p.quoteDate)}</span>
-                <span className="min-w-0 text-sm">{p.customerName ?? "(顧客名なし)"}</span>
+                <span className="min-w-0 break-all text-sm">
+                  {p.customerName ?? "(顧客名なし)"}
+                </span>
                 {p.memo && (
                   <span className="max-w-52 truncate text-xs text-slate-400">{p.memo}</span>
                 )}
@@ -264,8 +291,14 @@ export default async function ComparePage() {
                   <span className="tabular-nums text-slate-500">¥{formatYen(p.quoteTotal)}</span>
                   <ArrowRight className="h-3.5 w-3.5 text-slate-400" aria-hidden />
                   <span className="font-bold tabular-nums">¥{formatYen(p.invoiceTotal)}</span>
-                  <RateBadge quote={p.quoteTotal} invoice={p.invoiceTotal} />
-                  {!changed && <span className="text-xs text-slate-400">変更なし</span>}
+                  {p.unknownQuoteAmounts > 0 ? (
+                    <span className="text-xs text-slate-400">見積もりに金額未入力あり</span>
+                  ) : (
+                    <>
+                      <RateBadge quote={p.quoteTotal} invoice={p.invoiceTotal} />
+                      {!changed && <span className="text-xs text-slate-400">変更なし</span>}
+                    </>
+                  )}
                 </span>
               </summary>
               <PairDiff pair={p} />

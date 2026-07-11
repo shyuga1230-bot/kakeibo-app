@@ -76,6 +76,7 @@ function pair(over: Partial<QuotePair>): QuotePair {
     memo: null,
     quoteTotal: 1000,
     invoiceTotal: 1000,
+    unknownQuoteAmounts: 0,
     invoiceCount: 1,
     invoiceIds: [1],
     diff: { common: [], added: [], removed: [] },
@@ -95,6 +96,25 @@ test("増額・減額・変わらずの件数と合計が集計される", () =>
   assert.equal(s.increased, 1);
   assert.equal(s.decreased, 1);
   assert.equal(s.unchanged, 1);
+  assert.equal(s.notComparable, 0);
+});
+
+test("見積もりに金額未入力の項目がある案件は増減の判定から外れる", () => {
+  const s = summarizePairs([
+    // 金額未入力のせいで見積もり側が小さく出ている案件(増額と誤判定しがち)
+    pair({ quoteId: 1, quoteTotal: 100, invoiceTotal: 1200, unknownQuoteAmounts: 1 }),
+    pair({ quoteId: 2, quoteTotal: 1000, invoiceTotal: 1200 }),
+  ]);
+  assert.equal(s.increased, 1);
+  assert.equal(s.notComparable, 1);
+});
+
+test("見積もりの金額が未入力の項目は quoteAmount が null のまま返る", () => {
+  const d = diffItems(
+    [{ name: "測量", amount: null }],
+    [{ name: "測量", amount: 300000 }],
+  );
+  assert.deepEqual(d.common, [{ name: "測量", quoteAmount: null, invoiceAmount: 300000 }]);
 });
 
 test("追加されやすい項目のランキングから経費は除かれる", () => {

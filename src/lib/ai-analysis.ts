@@ -51,9 +51,10 @@ export async function buildAnalysisPack(): Promise<object> {
       .map((i) => ({ name: i.itemName, amount: i.amount, count: i.count })),
   }));
 
-  // 今年の顧客別の受注額
+  // 今年の顧客別の受注額(並び順を固定して、送る内容を毎回同じにする=キャッシュを効かせる)
   const customerRows = await prisma.quote.findMany({
     where: { deletedAt: null, quoteDate: { startsWith: `${thisYear}-` } },
+    orderBy: { id: "asc" },
     select: { customerName: true, items: { select: { amount: true } } },
   });
   const customerTotals = new Map<string, { total: number; count: number }>();
@@ -66,7 +67,7 @@ export async function buildAnalysisPack(): Promise<object> {
   }
   const customers = [...customerTotals.entries()]
     .map(([name, v]) => ({ name, ...v }))
-    .sort((a, b) => b.total - a.total)
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "ja"))
     .slice(0, 30);
 
   // 一緒に売れやすい組み合わせ
@@ -80,7 +81,7 @@ export async function buildAnalysisPack(): Promise<object> {
     .map((p) => ({ items: [p.itemA, p.itemB], count: p.count }));
 
   // 見積もり↔請求書の比較
-  const pairs = await loadQuoteInvoicePairs();
+  const { pairs, total: pairsTotal } = await loadQuoteInvoicePairs();
   const compareSummary = summarizePairs(pairs, 10);
   const comparePairs = pairs.slice(0, 40).map((p) => ({
     date: p.quoteDate,
@@ -88,10 +89,12 @@ export async function buildAnalysisPack(): Promise<object> {
     subject: p.memo,
     quoteTotal: p.quoteTotal,
     invoiceTotal: p.invoiceTotal,
+    // 見積もり側の金額が未入力(null)の項目は「変わった」とは言えないため入れない
+    unknownQuoteAmounts: p.unknownQuoteAmounts,
     addedItems: p.diff.added.map((a) => a.name),
     removedItems: p.diff.removed.map((r) => r.name),
     changedItems: p.diff.common
-      .filter((c) => c.quoteAmount !== c.invoiceAmount)
+      .filter((c) => c.quoteAmount != null && c.quoteAmount !== c.invoiceAmount)
       .map((c) => ({ name: c.name, quote: c.quoteAmount, invoice: c.invoiceAmount })),
   }));
 
@@ -122,14 +125,19 @@ export async function buildAnalysisPack(): Promise<object> {
     customersThisYear: customers,
     frequentlySoldTogether: cosalesPairs,
     quoteVsInvoice: {
-      note: "見積もりと、そこから作った請求書(税抜)の比較",
+      note:
+        pairsTotal > pairs.length
+          ? `見積もりと、そこから作った請求書(税抜)の比較。全${pairsTotal}件のうち新しい${pairs.length}件だけの集計(全体の合計ではない)`
+          : "見積もりと、そこから作った請求書(税抜)の比較",
       summary: {
         count: compareSummary.count,
+        totalPairsInDb: pairsTotal,
         quoteSum: compareSummary.quoteSum,
         invoiceSum: compareSummary.invoiceSum,
         increased: compareSummary.increased,
         decreased: compareSummary.decreased,
         unchanged: compareSummary.unchanged,
+        notComparable: compareSummary.notComparable,
         oftenAdded: compareSummary.addedRanking,
         oftenRemoved: compareSummary.removedRanking,
       },
@@ -177,9 +185,14 @@ export async function answerAnalysisQuestion(
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const client = new Anthropic({ maxRetries: 1, timeout: 50_000 });
 
+  const model = process.env.ANALYSIS_AI_MODEL || DEFAULT_MODEL;
+  // adaptive thinking はClaude 4.6以降の世代だけ。環境変数で古いモデルに
+  // 差し替えられてもエラーにならないよう、対応モデルのときだけ指定する
+  const supportsAdaptiveThinking = /sonnet-5|fable-5|opus-4-[678]|sonnet-4-6/.test(model);
+
   try {
     const response = await client.messages.create({
-      model: process.env.ANALYSIS_AI_MODEL || DEFAULT_MODEL,
+      model,
       max_tokens: 8000,
       // 集計データ入りの説明は毎回同じなので、キャッシュして2問目以降を安くする
       system: [
@@ -189,16 +202,20 @@ export async function answerAnalysisQuestion(
           cache_control: { type: "ephemeral" as const },
         },
       ],
-      thinking: { type: "adaptive" as const },
+      ...(supportsAdaptiveThinking ? { thinking: { type: "adaptive" as const } } : {}),
       messages,
     });
-    const text = response.content
+    let text = response.content
       .filter((block) => block.type === "text")
       .map((block) => block.text)
       .join("\n")
       .trim();
     if (text === "") {
       return { error: "AIの答えを受け取れませんでした。もう一度お試しください。" };
+    }
+    // 長さの上限で答えが途中で切れたときは、切れたことを正直に伝える
+    if (response.stop_reason === "max_tokens") {
+      text += "\n\n(答えが長くなりすぎたため途中までです。質問を小分けにしてもう一度お試しください)";
     }
     return { text };
   } catch (e) {
